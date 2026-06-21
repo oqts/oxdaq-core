@@ -1,0 +1,6 @@
+# Default owner for everything
+*                 @oqts/core
+
+# Protocol-critical paths get a named owner (paths are no-ops until they exist)
+/matching/        @amitchell-thomson
+/protocol/        @amitchell-thomson
