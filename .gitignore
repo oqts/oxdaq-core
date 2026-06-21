@@ -1,0 +1,32 @@
+# Byte-compiled / caches
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Secrets & local config — NEVER commit (use the org secrets manager)
+.env
+.env.*
+*.pem
+*.key
+secrets.*
+*.local.yaml
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
