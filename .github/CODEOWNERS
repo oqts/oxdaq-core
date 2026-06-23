@@ -1,6 +1,3 @@
-# Default owner for everything
-*                 @oqts/core
-
-# Protocol-critical paths get a named owner (paths are no-ops until they exist)
-/matching/        @amitchell-thomson
-/protocol/        @amitchell-thomson
+# Alec owns the entire OXDAQ exchange build end-to-end.
+# Every PR into this repo requires his review.
+*                 @amitchell-thomson
