@@ -1,6 +1,6 @@
 # OXDAQ — core exchange engine
 
-**OXDAQ** is the Oxford Quantitative Trading Strategies (OQTS) live trading simulator: a real-time, low-latency exchange where members write Python trading algorithms and compete in live rounds against each other and a configurable ecosystem of market-making, trend-following, and noise-trading bots.
+**OXDAQ** is the Oxford Quantitative Trading Society (OQTS) live trading simulator: a real-time, low-latency exchange where members write Python trading algorithms and compete in live rounds against each other and a configurable ecosystem of market-making, trend-following, and noise-trading bots.
 
 This repository holds the **public, open-source core** — the matching engine, the WebSocket protocol, and the `oqts-client` SDK that participants build against. Bot parameters, round configurations, and deployment live in separate (private) repositories.
 
@@ -95,4 +95,4 @@ See the org-wide [CONTRIBUTING guide](https://github.com/oqts/.github/blob/main/
 
 ## License
 
-[MIT](./LICENSE) © Oxford Quantitative Trading Strategies
+[MIT](./LICENSE) © Oxford Quantitative Trading Society
