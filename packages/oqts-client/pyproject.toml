@@ -1,0 +1,20 @@
+[project]
+name = "oqts-client"
+version = "0.1.0.dev0"
+description = "Client library for OXDAQ, the OQTS live trading simulator"
+readme = "README.md"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+authors = [{ name = "Oxford Quantitative Trading Society" }]
+dependencies = ["pydantic>=2.9"]
+
+# Deliberately minimal. A WebSocket dependency arrives at milestone 6 with
+# the connection layer, not before: adding one is a design decision
+# (OXDAQ-PLAN.md 15.2) and milestone 1 has no use for it.
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/oqts"]

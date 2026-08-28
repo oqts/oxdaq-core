@@ -1,0 +1,35 @@
+# Workspace root. Not a distributable package: the two members below are.
+#   packages/oqts-client  ->  published to PyPI, imported as `oqts`
+#   packages/oxdaq        ->  the server, never published
+# See planning/OXDAQ-PLAN.md 15.1, 15.2.
+
+[tool.uv.workspace]
+members = ["packages/oqts-client", "packages/oxdaq"]
+
+[tool.uv.sources]
+oqts-client = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "hypothesis>=6.112",
+    "ruff>=0.9",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+src = ["packages/oqts-client/src", "packages/oxdaq/src", "tests"]
+# Ruff reformats Python code blocks inside Markdown. Prose is not its job,
+# and silently rewriting a README during a lint run is a surprise.
+extend-exclude = ["*.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"

@@ -1,0 +1,8 @@
+{
+  "timestamp": 1714300000.123,
+  "seq": 3,
+  "type": "cancel_ack",
+  "order_id": "o-0001",
+  "instrument_id": "STOCK_A",
+  "cancelled_volume": 4
+}

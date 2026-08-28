@@ -1,0 +1,11 @@
+{
+  "timestamp": 1714300000.123,
+  "seq": 10,
+  "type": "round_ended",
+  "round_id": "round_2026_t2_a",
+  "final_cash": 101234.5678,
+  "final_positions": {
+    "STOCK_A": 0
+  },
+  "realised_pnl": 1234.5678
+}

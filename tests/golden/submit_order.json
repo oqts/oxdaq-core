@@ -1,0 +1,10 @@
+{
+  "timestamp": 1714300000.123,
+  "seq": 1,
+  "type": "submit_order",
+  "client_order_id": "c-0001",
+  "instrument_id": "STOCK_A",
+  "side": "bid",
+  "price": 99.5,
+  "volume": 10
+}

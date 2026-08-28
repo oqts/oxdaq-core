@@ -1,0 +1,12 @@
+{
+  "timestamp": 1714300000.123,
+  "seq": 4,
+  "type": "admin_event",
+  "event_id": "ev_0001",
+  "severity": "warn",
+  "category": "system",
+  "message": "fair value floor hit on STOCK_B",
+  "detail": {
+    "instrument_id": "STOCK_B"
+  }
+}

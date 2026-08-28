@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # Python is pinned to 3.13 in .python-version, and production
+      # containers run python:3.13-slim, so CI, local and server match
+      # exactly (spec 15.2).
+      - name: Sync the locked environment
+        run: uv sync --locked
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Format
+        run: uv run ruff format --check .
+
+      # tests/protocol/test_golden.py is the schema freeze (spec 15.2,
+      # D17). A failure there is not a broken test: it means the wire
+      # shape changed, and that is a protocol change requiring a
+      # PROTOCOL_VERSION bump and a matching edit to OXDAQ-PLAN.md.
+      - name: Test
+        run: uv run pytest

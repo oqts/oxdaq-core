@@ -1,0 +1,7 @@
+{
+  "timestamp": 1714300000.123,
+  "seq": 4,
+  "type": "cancel_rejected",
+  "order_id": "o-0009",
+  "reason": "unknown_order"
+}

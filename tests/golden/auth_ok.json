@@ -1,0 +1,12 @@
+{
+  "timestamp": 1714300000.123,
+  "seq": 0,
+  "type": "auth_ok",
+  "protocol_version": 1,
+  "connection_id": "conn_9f2a",
+  "team_id": "team_07",
+  "display_name": "Merton Micro",
+  "role": "participant",
+  "session_id": "sess_r3",
+  "server_time": 1714300000.123
+}

@@ -1,0 +1,10 @@
+{
+  "timestamp": 1714300000.123,
+  "seq": 5,
+  "type": "admin_ack",
+  "request_id": "req-001",
+  "command": "admin_start_round",
+  "detail": {
+    "round_id": "round_2026_t2_a"
+  }
+}

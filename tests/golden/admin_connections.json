@@ -1,0 +1,19 @@
+{
+  "timestamp": 1714300000.123,
+  "seq": 2,
+  "type": "admin_connections",
+  "connections": [
+    {
+      "connection_id": "conn_9f2a",
+      "team_id": "team_07",
+      "display_name": "Merton Micro",
+      "role": "participant",
+      "connected_at": 1714299700.123,
+      "last_seen": 1714300000.123,
+      "orders_submitted": 141,
+      "orders_rejected": 2,
+      "fills": 58,
+      "errors": 0
+    }
+  ]
+}

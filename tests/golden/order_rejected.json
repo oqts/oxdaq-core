@@ -1,0 +1,7 @@
+{
+  "timestamp": 1714300000.123,
+  "seq": 2,
+  "type": "order_rejected",
+  "client_order_id": "c-0002",
+  "reason": "insufficient_buying_power"
+}

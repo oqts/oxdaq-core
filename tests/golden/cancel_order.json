@@ -1,0 +1,6 @@
+{
+  "timestamp": 1714300000.123,
+  "seq": 2,
+  "type": "cancel_order",
+  "order_id": "o-0001"
+}

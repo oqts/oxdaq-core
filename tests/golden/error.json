@@ -1,0 +1,16 @@
+{
+  "timestamp": 1714300000.123,
+  "seq": 11,
+  "type": "error",
+  "code": "schema_violation",
+  "message": "message 'submit_order' does not match the schema",
+  "detail": {
+    "errors": [
+      {
+        "field": "volume",
+        "problem": "Input should be > 0"
+      }
+    ]
+  },
+  "client_order_id": "c-0003"
+}

@@ -6,15 +6,60 @@ overview is `README.md`.
 
 ## Authoritative spec
 
-`../planning/OXDAQ-PLAN.md` **v2.0** is the contract. All section
-numbers below are v2.0 numbering. It states: do not deviate from these
-decisions without updating this document first. Treat that literally.
+`../planning/OXDAQ-PLAN.md` **v2.1** is the contract. All section
+numbers below are v2.1 numbering, which is v2.0 numbering plus sections
+9.9 (`error`), 9.10 (admin protocol) and 6.6 (non-negativity). It states:
+do not deviate from these decisions without updating this document first.
+Treat that literally.
 
 v1.0 section numbers appear in older documents and are **not** valid
 here. `../planning/CLAUDE.md` records which documents still carry them.
 
 Related: `../planning/ARCHITECTURE.md` (where OXDAQ sits in the estate),
 `../oqts-design/brand.md` (all dashboard styling).
+
+## Repo layout
+
+A uv workspace with two packages. The split is not cosmetic.
+
+```
+packages/oqts-client/src/oqts/     published to PyPI, imported as `oqts`
+    protocol/  enums, messages, codec        <- SHARED, frozen
+packages/oxdaq/src/oxdaq/          the server, never published
+    units.py   TICK_SCALE, to_wire/from_wire <- SERVER ONLY
+tests/protocol/                    suites + samples.py
+tests/golden/                      one frozen JSON frame per message type
+docs/protocol.md                   participant-facing protocol reference
+```
+
+- **Message shapes are shared.** The server, the client, the bots and both
+  dashboards all need them, so they live in the published package.
+- **Integer conversion is server-only.** The client is float-native
+  throughout (`get_cash() -> float`), so shipping tick machinery to
+  participants would contradict spec 3.3.
+- **The server depends on the client, not the reverse.** Bots connect over
+  localhost using the participant protocol (spec 7.1), so the server needs
+  the client package anyway, and this direction makes drift impossible.
+
+Everything a participant needs is importable from `oqts` directly. If a
+strategy ever has to reach below the top level, that is an ergonomics bug
+in this package.
+
+## The schema is frozen
+
+`tests/golden/` pins every message byte for byte, and
+`tests/protocol/test_codec.py` pins invariant 7 structurally: there is a
+test that walks every outbound model and fails if any field could carry a
+fair value or a process parameter.
+
+**A failure in `test_golden.py` is not a broken test. It is the freeze
+working.** Do not regenerate the corpus to make it pass. A protocol change
+is all four of: bump `PROTOCOL_VERSION`, edit `../planning/OXDAQ-PLAN.md`
+section 9 in the same change set, update `tests/protocol/samples.py`, then
+`uv run python tests/protocol/regenerate_golden.py`.
+
+Ruff is configured not to touch Markdown: it reformats Python code blocks
+inside README files, which is a surprise during a lint run.
 
 ## Toolchain
 
@@ -99,8 +144,9 @@ Violating any of these is a correctness bug, not a style question.
 Strictly sequential; a later milestone cannot be tested without the
 earlier ones (spec 15.4).
 
-1. Message schema and codec, frozen before any other code is written
-2. Matching engine + correctness suite
+1. ~~Message schema and codec~~ **done**, frozen. 29 message types,
+   `PROTOCOL_VERSION = 1`
+2. Matching engine + correctness suite  <- **current**
 3. Session manager, accounting, validation + suite
 4. WebSocket gateway, auth, resync
 5. Price process engine
@@ -125,6 +171,11 @@ Not blocking milestone 1, but unresolved. Raise rather than assume.
 - **The bot manager interface** between `oxdaq-core` (runner harness) and
   `oxdaq-ops` (implementations and parameters) is not designed. Agree the
   contract before writing either side.
+- **`README.md` is stale against v2.1.** It says Python 3.11+, lists ten
+  milestones rather than twelve, points at `oqts.ox.ac.uk` rather than
+  `oxdaq.oqts.org`, and predates the practice exchange. Not blocking.
+- **A depth limit on `book_update`** (spec 16). Watch at milestone 12
+  under 20+ connections with noise traders running.
 - **A dashboard subsection of `brand.md`** is planned, covering tabular
   density, live-updating numeric cells and status treatment. Until it
   exists, follow `brand.md` as written.

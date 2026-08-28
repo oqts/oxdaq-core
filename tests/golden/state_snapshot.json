@@ -1,0 +1,53 @@
+{
+  "timestamp": 1714300000.123,
+  "seq": 5,
+  "type": "state_snapshot",
+  "session_id": "sess_r3",
+  "session_state": "RUNNING",
+  "server_time": 1714300000.123,
+  "ends_at": 1714301200.123,
+  "instruments": [
+    {
+      "id": "STOCK_A",
+      "starting_price": 100.0,
+      "tick_size": 0.01,
+      "lot_size": 1
+    }
+  ],
+  "cash": 101234.5678,
+  "positions": {
+    "STOCK_A": 12
+  },
+  "open_orders": [
+    {
+      "order_id": "o-0001",
+      "client_order_id": "c-0001",
+      "instrument_id": "STOCK_A",
+      "side": "bid",
+      "price": 99.5,
+      "volume": 10,
+      "remaining_volume": 6
+    }
+  ],
+  "books": {
+    "STOCK_A": {
+      "bids": [
+        {
+          "price": 99.5,
+          "volume": 40
+        },
+        {
+          "price": 99.49,
+          "volume": 15
+        }
+      ],
+      "asks": [
+        {
+          "price": 99.52,
+          "volume": 25
+        }
+      ],
+      "last_trade_price": 99.51
+    }
+  }
+}

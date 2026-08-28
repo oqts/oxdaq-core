@@ -1,0 +1,8 @@
+{
+  "timestamp": 1714300000.123,
+  "seq": 6,
+  "type": "admin_rejected",
+  "request_id": "req-002",
+  "command": "admin_end_round",
+  "reason": "round_id_mismatch"
+}

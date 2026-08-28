@@ -1,0 +1,13 @@
+{
+  "timestamp": 1714300000.123,
+  "seq": 3,
+  "type": "admin_health",
+  "instrument_id": "STOCK_A",
+  "best_bid": 99.5,
+  "best_ask": 99.52,
+  "spread_ticks": 2,
+  "bid_depth": 55,
+  "ask_depth": 25,
+  "trades_last_60s": 87,
+  "quoting_ok": true
+}

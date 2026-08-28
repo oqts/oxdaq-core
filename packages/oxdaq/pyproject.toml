@@ -1,0 +1,22 @@
+[project]
+name = "oxdaq"
+version = "0.1.0.dev0"
+description = "OXDAQ exchange server: matching engine, session manager, gateway"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+dependencies = ["oqts-client"]
+
+# The server depends on the client, not the reverse. Bots connect over
+# localhost using the participant protocol (OXDAQ-PLAN.md 7.1), so the
+# server needs the client package anyway, and this direction makes drift
+# between wire definitions structurally impossible.
+#
+# Arriving with their milestones: sortedcontainers (2, order book),
+# fastapi (4, gateway), numpy (5, price process).
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/oxdaq"]

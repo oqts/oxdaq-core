@@ -1,0 +1,19 @@
+{
+  "timestamp": 1714300000.123,
+  "seq": 8,
+  "type": "round_started",
+  "round_id": "round_2026_t2_a",
+  "instruments": [
+    {
+      "id": "STOCK_A",
+      "starting_price": 100.0,
+      "tick_size": 0.01,
+      "lot_size": 1
+    }
+  ],
+  "starting_cash": 100000.0,
+  "position_limit": 100,
+  "duration_s": 1200.0,
+  "ends_at": 1714301200.123,
+  "server_time": 1714300000.123
+}

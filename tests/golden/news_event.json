@@ -1,0 +1,10 @@
+{
+  "timestamp": 1714300000.123,
+  "seq": 9,
+  "type": "news_event",
+  "event_id": "news_001",
+  "headline": "Q3 earnings significantly beat expectations.",
+  "affected_instruments": [
+    "STOCK_A"
+  ]
+}

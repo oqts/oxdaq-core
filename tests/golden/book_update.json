@@ -1,0 +1,23 @@
+{
+  "timestamp": 1714300000.123,
+  "seq": 7,
+  "type": "book_update",
+  "instrument_id": "STOCK_A",
+  "bids": [
+    {
+      "price": 99.5,
+      "volume": 40
+    },
+    {
+      "price": 99.49,
+      "volume": 15
+    }
+  ],
+  "asks": [
+    {
+      "price": 99.52,
+      "volume": 25
+    }
+  ],
+  "last_trade_price": 99.51
+}
