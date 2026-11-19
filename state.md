@@ -3,9 +3,10 @@
 **As of:** 2026-11-19 · **State:** live, in build (Phase 1)
 
 ## Now
+- `main` holds everything through D40: PRs #3 to #6 merged 2026-11-19, CI green on every merge.
 - Milestone 1 is done at protocol v2 (2026-11-19): `order_type`, `trade_tick`, `rate_limited`, no admin seed; golden corpus regenerated.
 - Ready for R1: the shared engine suite (`tests/engine`, 52 tests on the Python engine), the Hypothesis stream checks and differential test, and the replay and shrink tool. Checked against a throwaway engine and seven broken variants, then deleted. `uv run pytest tests/engine -q` shows where the engine stands.
-- Ready for R2: `packages/oxdaq-engine` scaffold (CMake presets dev, asan, release; GoogleTest; clang-format, clang-tidy; scikit-build-core in the workspace; CI matrix). Green locally on Apple clang; the GitHub matrix has not yet run.
+- Ready for R2: `packages/oxdaq-engine` scaffold (CMake presets dev, asan, release; GoogleTest; clang-format, clang-tidy; scikit-build-core in the workspace; CI matrix). Green locally and on the full GitHub matrix (Apple clang, clang-18, gcc-14; dev and asan).
 
 ## Decided
 - 2026-11-19: only the matching engine moves to C++, in process via nanobind; the Python reference engine stays as oracle and fallback (D19 to D24).
