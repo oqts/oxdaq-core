@@ -68,9 +68,15 @@ deliberately ([`protocol.md`](protocol.md), top).
 | CI | GitHub Actions on macOS and Ubuntu (GCC, clang): ctest, sanitizer build, pytest on both engines, differential test |
 
 ```bash
-cmake --preset dev && cmake --build --preset dev && ctest --preset dev
+cd packages/oxdaq-engine
+cmake --workflow --preset dev                # configure, build, ctest (also asan, release)
 uv sync --reinstall-package oxdaq-engine     # rebuild the module for Python
 ```
+
+`cpp/` holds the engine (headers in `cpp/include/oxdaq/`, sources in
+`cpp/src/`) and `tests/cpp/` its GoogleTest suite; CMake picks up new
+files in either with no edit. GoogleTest is pinned to v1.17.0 by URL and
+SHA-256.
 
 ### 2.3 Dashboards
 

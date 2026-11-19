@@ -6,6 +6,7 @@ requires-python = ">=3.13"
 members = [
     "oqts-client",
     "oxdaq",
+    "oxdaq-engine",
 ]
 
 [manifest.dependency-groups]
@@ -132,6 +133,11 @@ requires-dist = [
     { name = "oqts-client", editable = "packages/oqts-client" },
     { name = "sortedcontainers", specifier = ">=2.4" },
 ]
+
+[[package]]
+name = "oxdaq-engine"
+version = "0.1.0.dev0"
+source = { editable = "packages/oxdaq-engine" }
 
 [[package]]
 name = "packaging"

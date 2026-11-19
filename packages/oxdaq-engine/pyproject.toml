@@ -1,0 +1,34 @@
+[project]
+name = "oxdaq-engine"
+version = "0.1.0.dev0"
+description = "OXDAQ's C++20 matching engine, as the in-process module oxdaq_engine"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+
+# Built by scikit-build-core from CMakeLists.txt (docs/build.md 2.2, D23).
+# Until R8 adds the nanobind module the wheel is empty: `uv sync` builds
+# nothing, and the shared engine suite skips the cpp engine.
+
+[build-system]
+requires = ["scikit-build-core>=0.11"]
+build-backend = "scikit_build_core.build"
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+cmake.version = ">=3.25"
+cmake.build-type = "Release"
+build-dir = "build/{wheel_tag}"
+wheel.packages = []
+
+[tool.scikit-build.cmake.define]
+OXDAQ_TESTS = "OFF" # GoogleTest runs through the presets, not the wheel build
+
+[tool.uv]
+# Rebuild the module when the C++ or its build changes, not only on a
+# version bump (docs/build.md 2.2).
+cache-keys = [
+    { file = "pyproject.toml" },
+    { file = "CMakeLists.txt" },
+    { file = "cpp/**/*.hpp" },
+    { file = "cpp/**/*.cpp" },
+]

@@ -1,10 +1,11 @@
-# Workspace root. Not a distributable package: the two members below are.
+# Workspace root. Not a distributable package: the members below are.
 #   packages/oqts-client  ->  published to PyPI, imported as `oqts`
 #   packages/oxdaq        ->  the server, never published
+#   packages/oxdaq-engine ->  the C++ engine, imported as `oxdaq_engine` (R8)
 # See docs/build.md 1 and 2.1.
 
 [tool.uv.workspace]
-members = ["packages/oqts-client", "packages/oxdaq"]
+members = ["packages/oqts-client", "packages/oxdaq", "packages/oxdaq-engine"]
 
 [tool.uv.sources]
 oqts-client = { workspace = true }

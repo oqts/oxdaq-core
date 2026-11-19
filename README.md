@@ -65,7 +65,7 @@ uv run ruff check .      # lint
 uv run ruff format .     # format
 ```
 
-Python is pinned to 3.13. The C++ engine, once it lands in `packages/oxdaq-engine`, builds with CMake presets and is packaged into the workspace by scikit-build-core ([`docs/build.md`](docs/build.md)).
+Python is pinned to 3.13.
 
 **Where the matching engine stands:**
 
@@ -74,6 +74,14 @@ uv run pytest tests/engine -q
 ```
 
 This is the shared correctness suite, run against each engine ([`docs/design.md`](docs/design.md) 4.5). Until the reference engine exists it reports one failure naming what to write. A failing random stream is saved to `.oxdaq/failures/`; `uv run python -m tests.engine.replay <file> --shrink` cuts it down to the fewest orders that still fail.
+
+**The C++ engine** lives in `packages/oxdaq-engine`. It builds with CMake presets (`dev`, `asan`, `release`) and is packaged into the workspace by scikit-build-core ([`docs/build.md`](docs/build.md) 2.2). It needs CMake 3.25+ and Ninja (`brew install cmake ninja`); clang-format, clang-tidy and clangd come with `brew install llvm`.
+
+```bash
+cd packages/oxdaq-engine
+cmake --workflow --preset dev     # configure, build, run GoogleTest
+cmake --workflow --preset asan    # the same under AddressSanitizer and UBSan
+```
 
 **The wire protocol is frozen.** `tests/golden/` pins every message byte for byte. A failure there means the wire shape changed, which requires a `PROTOCOL_VERSION` bump and a matching change to `docs/protocol.md`.
 
