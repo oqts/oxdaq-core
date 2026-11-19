@@ -121,7 +121,7 @@ port or state, so nothing in practice can touch a live round.
 | --- | --- | --- |
 | Reset | Daily, 04:00 UK | Bounds memory, writes a tape, clean start |
 | Bots | A separate practice parameter set | The competition bots must not be reverse-engineered in advance |
-| Instruments | Competition-like, different seeds | Practice should transfer; exact configs should not |
+| Instruments | Competition-like, a fresh seed at every reset ([`design.md`](design.md) 6.7) | Practice should transfer; exact configs should not |
 | Leaderboard | Not shown | Practice is for experiments |
 | During a live round | Paused | Frees resources on the day |
 | Price process | Ornstein-Uhlenbeck | Stays in range over days, where GBM wanders |
@@ -146,3 +146,29 @@ Milestones 1 to 12 complete ([`build.md`](build.md) 4), plus:
 - **Participant laptops set not to sleep.** A sleeping laptop loses its
   orders and stops trading silently: still the most likely failure on
   the day.
+
+## 7. Fair play
+
+The engine, protocol and client are public so that every competitor
+reads the same rules. What decides a round stays private: fair values,
+process parameters and seeds, bot code and parameters, the news
+schedule, and which counterparties are bots. These rules go in the
+participant documentation and are read out before every round.
+
+- **Anything through the protocol is fair**, including studying the book
+  and the bots to infer fair value. That is the skill being tested.
+- **Exploiting a bug is not.** A strategy that profits from behaviour
+  contrary to these documents (a validation hole, an accounting error, a
+  leak) is disqualified from the round, and the round is rescored from
+  the trade tape without the exploited trades.
+- **Reporting a bug earns credit.** Tell the organisers privately; it is
+  fixed and the reporter acknowledged. Reports during a round are acted
+  on after it.
+- **Leave the infrastructure alone.** No attempts at other teams' tokens,
+  admin access, or loading the server beyond the rate limit.
+- **Latency is part of the game.** Participants run their strategies
+  wherever they like, including a server near the exchange. The server's
+  location is not a secret.
+
+The tape makes all of this checkable: every order, fill and the seed are
+recorded, so any result can be recomputed after the round.

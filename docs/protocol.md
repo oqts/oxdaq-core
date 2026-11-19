@@ -290,7 +290,9 @@ Every admin command carries a client-assigned `request_id`, echoed in
 | `starting_cash` | float | |
 | `position_limit` | int | Uniform across instruments |
 | `duration_s` | float | |
-| `seed` | int | Price process RNG seed, recorded in the tape |
+
+No seed: the server generates one ([`design.md`](design.md) 6.7). The v1
+schema carries a `seed` field here; v2 removes it.
 
 #### `admin_end_round`
 | Field | Type | Description |
