@@ -60,6 +60,7 @@ SAMPLES: dict[str, m._Message] = {
         client_order_id="c-0001",
         instrument_id="STOCK_A",
         side="bid",
+        order_type="limit",
         price=99.5,
         volume=10,
     ),
@@ -151,6 +152,14 @@ SAMPLES: dict[str, m._Message] = {
         asks=list(_BOOK.asks),
         last_trade_price=99.51,
     ),
+    "trade_tick": m.TradeTick(
+        timestamp=_T,
+        seq=8,
+        instrument_id="STOCK_A",
+        price=99.52,
+        volume=4,
+        aggressor_side="bid",
+    ),
     # --- server to all, lifecycle, protocol.md 8 ---
     "round_started": m.RoundStarted(
         timestamp=_T,
@@ -211,7 +220,6 @@ SAMPLES: dict[str, m._Message] = {
         starting_cash=100000.0,
         position_limit=100,
         duration_s=1200.0,
-        seed=20260828,
     ),
     "admin_end_round": m.AdminEndRound(
         timestamp=_T, seq=1, request_id="req-002", round_id="round_2026_t2_a"

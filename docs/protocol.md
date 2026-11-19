@@ -4,10 +4,11 @@ Spec 3.0, 2026-11-19. **Protocol version 2.** The single reference for
 the wire format, for anyone writing against OXDAQ directly rather than
 through `oqts-client`.
 
-> **The code currently implements version 1.** Version 2 adds `order_type`
-> (IOC orders), `trade_tick`, the `rate_limited` reason and cancel on
-> disconnect. It lands as one schema change before engine work starts;
-> until then `PROTOCOL_VERSION = 1` and orders survive a disconnection.
+Version 2 added `order_type` (IOC orders), `trade_tick`, the
+`rate_limited` reason and cancel on disconnect, and removed the admin
+`seed` field ([`decisions.md`](decisions.md) D28 to D32). The schema
+implements version 2; cancel on disconnect is server behaviour, built at
+milestone 4.
 
 The machine-readable definition is
 [`messages.py`](../packages/oqts-client/src/oqts/protocol/messages.py),
@@ -163,7 +164,7 @@ Sent only to the two counterparties of a match.
 | `remaining_volume` | int | Still resting; zero means done |
 | `aggressor` | bool | True if your order was the incoming one |
 | `cash` | float | Your cash after this fill. Authoritative |
-| `position` | object | Your full position map after this fill. Authoritative |
+| `positions` | object | Your full position map after this fill. Authoritative |
 
 ## 7. Market data
 
@@ -291,8 +292,8 @@ Every admin command carries a client-assigned `request_id`, echoed in
 | `position_limit` | int | Uniform across instruments |
 | `duration_s` | float | |
 
-No seed: the server generates one ([`design.md`](design.md) 6.7). The v1
-schema carries a `seed` field here; v2 removes it.
+No seed: the server generates one ([`design.md`](design.md) 6.7). Version
+1 had a `seed` field here; version 2 removed it.
 
 #### `admin_end_round`
 | Field | Type | Description |

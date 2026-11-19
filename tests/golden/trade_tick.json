@@ -1,0 +1,9 @@
+{
+  "timestamp": 1714300000.123,
+  "seq": 8,
+  "type": "trade_tick",
+  "instrument_id": "STOCK_A",
+  "price": 99.52,
+  "volume": 4,
+  "aggressor_side": "bid"
+}

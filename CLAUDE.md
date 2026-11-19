@@ -38,9 +38,8 @@ protocol change is all of: bump `PROTOCOL_VERSION`, edit
 `docs/protocol.md` in the same PR, update `tests/protocol/samples.py`,
 run `uv run python tests/protocol/regenerate_golden.py`.
 
-**Protocol v2 is authorised** (D28 to D31): `order_type`, `trade_tick`,
-`rate_limited`, `PROTOCOL_VERSION = 2`. Claude implements it once,
-before milestone 2. After that the freeze applies to v2.
+The schema is at **protocol v2** (D28 to D32, 2026-11-19), and the freeze
+now applies to v2.
 
 Ruff does not touch Markdown (it would reformat code blocks in docs).
 
@@ -105,8 +104,8 @@ The canonical list is design 8. Breaking one is a correctness bug:
 
 ## Build order
 
-Build 4. Milestone 1 is done at v1 and reopens once for v2; milestone 2
-(the Python reference engine) is current. The engine track (E1, E2)
+Build 4. Milestone 1 is done at v2; milestone 2 (the Python reference
+engine) is current. The engine track (E1, E2)
 depends on milestone 2 only. Do not start a milestone before the
 previous one is done. Never run a live round with untuned bots (design
 7.3).

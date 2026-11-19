@@ -4,7 +4,7 @@
 
 This repository is the **open-source core**: the matching engine, the wire protocol, the `oqts-client` library participants build against, and the dashboards. Bot parameters and round configurations live in a private repository, because the bots are meant to be reverse-engineered during a round, not before it.
 
-> **Status: in build.** The wire protocol is done (version 1, with version 2 specified). The matching engine is next. See [build status](#build-status).
+> **Status: in build.** The wire protocol is done (version 2). The Python reference matching engine is next. See [build status](#build-status).
 
 ## How it works
 
@@ -72,7 +72,7 @@ Python is pinned to 3.13. The C++ engine, once it lands in `packages/oxdaq-engin
 ## Build status
 
 - [x] 1. Message schema and codec (protocol v1)
-- [ ] 1b. Protocol v2: IOC orders, `trade_tick`, rate limit, cancel on disconnect
+- [x] 1b. Protocol v2: IOC orders, `trade_tick`, rate limit, cancel on disconnect (schema; the disconnect sweep is built in 4)
 - [ ] 2. Python reference matching engine
 - [ ] 3. Session manager, accounting and validation
 - [ ] 4. WebSocket gateway

@@ -5,6 +5,7 @@
   "client_order_id": "c-0001",
   "instrument_id": "STOCK_A",
   "side": "bid",
+  "order_type": "limit",
   "price": 99.5,
   "volume": 10
 }
