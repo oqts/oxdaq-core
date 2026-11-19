@@ -38,8 +38,10 @@ here, in the same pull request as the change it makes.
 | D29 | 2026-11-19 | Orders survived disconnection, so a sleeping laptop traded blind | Orders belong to their connection and are swept through the queue when it closes | design 2.3, protocol 2, client 4 |
 | D30 | 2026-11-19 | Nothing bounded one connection's order rate | Token bucket, default 25 a second, `rate_limited` without disconnecting; bots included | design 5.5 |
 | D31 | 2026-11-19 | The old client promised public trades that no message carried | `trade_tick` for every match, anonymous, never coalesced | protocol 7 |
+| D32 | 2026-11-19 | The admin chose the seed, and the public generator replays any known seed | The server generates every seed from a secure source, never derived, supplied or reused, revealed only in the tape after the session | design 6.7, protocol 10 |
+| D33 | 2026-11-19 | No rule for bug exploitation, reporting or latency in a public-code competition | A fair-play section: exploits disqualify and the round is rescored from the tape, reports earn credit, latency is allowed | operations 7 |
 
 D1 to D10 resolved problems in the first draft of the spec; D11 to D18
 were found while writing the milestone 1 schema; D19 to D31 came from
 the November 2026 replanning that added the C++ engine and redesigned
-the client.
+the client; D32 and D33 from a review of what the public spec reveals.

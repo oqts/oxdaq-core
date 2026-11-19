@@ -99,7 +99,9 @@ The canonical list is design 8. Breaking one is a correctness bug:
 12. Orders belong to their connection; the disconnect sweep goes through
     the queue and touches only that connection's orders.
 13. `trade_tick` is never coalesced or dropped.
-14. In memory only; the trade tape is the only persistence.
+14. Seeds are secret until the session ends: server-generated from a
+    secure source, never derived, admin-supplied or reused (design 6.7).
+15. In memory only; the trade tape is the only persistence.
 
 ## Build order
 
