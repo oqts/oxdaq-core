@@ -1,135 +1,417 @@
 # The OXDAQ wire protocol
 
-**Protocol version 1.** Reference for anyone writing against OXDAQ
-directly rather than through `oqts-client`.
+Spec 3.0, 2026-11-19. **Protocol version 2.** The single reference for
+the wire format, for anyone writing against OXDAQ directly rather than
+through `oqts-client`.
 
-The binding specification is `planning/OXDAQ-PLAN.md` section 9. This
-document is the readable companion; where they differ, the spec wins.
+> **The code currently implements version 1.** Version 2 adds `order_type`
+> (IOC orders), `trade_tick`, the `rate_limited` reason and cancel on
+> disconnect. It lands as one schema change before engine work starts;
+> until then `PROTOCOL_VERSION = 1` and orders survive a disconnection.
+
 The machine-readable definition is
-[`packages/oqts-client/src/oqts/protocol/messages.py`](../packages/oqts-client/src/oqts/protocol/messages.py),
-and every message shape is pinned byte for byte in
-[`tests/golden/`](../tests/golden).
+[`messages.py`](../packages/oqts-client/src/oqts/protocol/messages.py),
+and every message is pinned byte for byte in [`tests/golden/`](../tests/golden).
+A wire change means: bump `PROTOCOL_VERSION`, change this document in
+the same pull request, update `tests/protocol/samples.py`, regenerate the
+golden corpus.
 
-## Transport
+## 1. Envelope
 
-WebSocket, JSON frames, one frame per message. Every message in both
-directions carries the same envelope:
+WebSocket, JSON, one frame per message. Every message in both directions:
 
 ```json
 { "type": "...", "timestamp": 1714300000.123, "seq": 4821 }
 ```
 
-`seq` is **diagnostic only**. WebSocket runs over TCP, so within a live
-connection nothing is dropped or reordered, and a gap can only mean a
-server bug. Recovery from a genuinely lost connection is `resync`, not
-sequence replay.
+- `type`: the message discriminator.
+- `timestamp`: Unix seconds, millisecond precision. Server-assigned
+  outbound; **ignored inbound**. Your clock never affects priority.
+- `seq`: increases per connection. **Diagnostic only:** TCP neither drops
+  nor reorders within a connection, so a gap means a server bug. Recovery
+  from a lost connection is `resync` (5), not `seq`.
 
-`timestamp` is server-assigned outbound and **ignored inbound**. Time
-priority is the server's queue arrival order, stamped at enqueue. Your
-clock has no effect on where your order sits in the book.
-
-## Connecting
+## 2. Connecting
 
 ```
-you connect  ->  wss://oxdaq.oqts.org/ws
-you send     ->  {"type": "auth", "token": "..."}
-server sends ->  {"type": "auth_ok", ...}
-server sends ->  {"type": "state_snapshot", ...}
+client connects  ->  wss://oxdaq.oqts.org/ws
+client sends     ->  {"type": "auth", "token": "..."}
+server replies   ->  {"type": "auth_ok", ...}
+server follows   ->  {"type": "state_snapshot", ...}
 ```
 
-The token goes in the first message, never in the URL. Any other message
-while unauthenticated closes the connection, and so does taking longer
-than 5 seconds to send one.
+The token goes in the first message, never in the URL (where it would
+land in proxy logs and shell history). Anything else while
+unauthenticated closes with `4003`; no `auth` within 5 seconds closes
+with `4002`; a bad token closes with `4001`.
 
-| Close code | Meaning |
-| --- | --- |
-| 4001 | Invalid or expired token |
-| 4002 | No `auth` within 5 seconds |
-| 4003 | Sent something other than `auth` while unauthenticated |
-| 4008 | More than 20 protocol errors in 10 seconds |
-| 4009 | Disconnected by the admin |
+One team token may hold several connections: a team's algorithm and its
+dashboard share one.
 
-A team token may hold several connections at once: your algorithm and
-your dashboard share one by design.
+**Orders belong to the connection that submitted them.** When a
+connection closes, for any reason, the server cancels every order that
+connection submitted and releases their reservations, through the order
+queue ([`design.md`](design.md) 2.3), then broadcasts the new book.
+Closing a dashboard never touches the algorithm's orders. No
+`cancel_ack` is sent; the next `state_snapshot` shows the result.
 
-## Messages you send
-
-| Type | Purpose |
-| --- | --- |
-| `auth` | First message. Always |
-| `submit_order` | Limit order. `side` is `"bid"` or `"ask"` |
-| `cancel_order` | By `order_id` from the `order_ack`, not your `client_order_id` |
-| `resync` | Asks for a fresh `state_snapshot` |
-
-## Messages you receive
-
-| Type | Sent to | When |
+#### `auth_ok`
+| Field | Type | Description |
 | --- | --- | --- |
-| `auth_ok` | You | After a valid `auth` |
-| `state_snapshot` | You | After `auth_ok`, and on `resync` |
-| `order_ack` | You | Order accepted. Carries the canonical `order_id` and the tick-rounded price |
-| `order_rejected` | You | Order refused. See the reasons below |
-| `cancel_ack` | You | Cancel applied. `cancelled_volume` is what was released |
-| `cancel_rejected` | You | Cancel refused |
-| `fill` | Both counterparties | A trade happened. Carries your authoritative cash and full position map |
-| `book_update` | Everyone | Any book change. A full snapshot, never a delta |
-| `round_started` | Everyone | Round begins |
-| `news_event` | Everyone | A headline. No magnitude: inferring it is the point |
-| `round_ended` | Everyone | Round over, with your final figures |
-| `error` | You | A frame the server could not understand |
+| `protocol_version` | int | A client whose version differs must fail loudly at startup |
+| `connection_id` | string | Unique per connection. Quoted in support and admin telemetry |
+| `team_id` | string | The authenticated identity |
+| `display_name` | string | For dashboards |
+| `role` | string | `participant` \| `admin` |
+| `session_id` | string | The session this connection is attached to |
+| `server_time` | float | For clock offset |
 
-### Rejection reasons
+**There are exactly two roles, and `bot` is not one.** Team, bot and
+practice tokens all grant `participant`; only admin tokens grant
+`admin`. With no bot role on the wire, nothing can leak one.
 
-`order_rejected.reason` is one of `insufficient_buying_power`,
-`position_limit_breached`, `round_not_active`, `unknown_instrument`,
-`invalid_volume`, `invalid_price`.
+## 3. Client to server
 
-`cancel_rejected.reason` is one of `unknown_order`, `not_your_order`,
-`round_not_active`.
+#### `auth`
+| Field | Type | Description |
+| --- | --- | --- |
+| `token` | string | Team, bot, practice or admin token |
 
-`error` is a different thing: it means the frame itself was wrong, not
-that a well-formed request was refused. It does not close your
-connection.
+#### `submit_order`
+| Field | Type | Description |
+| --- | --- | --- |
+| `client_order_id` | string | Unique per connection per session. Echoed in ack and fills |
+| `instrument_id` | string | Configured for this session |
+| `side` | string | `"bid"` \| `"ask"` |
+| `order_type` | string | `"limit"` \| `"ioc"`. An IOC remainder never rests |
+| `price` | float | Limit price. Rounded to the tick on receipt |
+| `volume` | int | Positive, a multiple of `lot_size` |
 
-## Six things that surprise people
+#### `cancel_order`
+| Field | Type | Description |
+| --- | --- | --- |
+| `order_id` | string | From the `order_ack`, not the `client_order_id` |
 
-**1. Your resting orders survive a disconnection.** There is no
-cancel-on-disconnect. An order you placed keeps resting in the book and
-can fill while your process is disconnected, asleep, or dead. This
-matches real venue behaviour, and on the practice exchange it means an
-algorithm you killed last night may have traded overnight. **Set your
-machine not to sleep during a round.**
+#### `resync`
+No payload. Requests a fresh `state_snapshot`.
 
-**2. Prices are snapped to the tick, not rejected.** A price between
-ticks is rounded to the nearest one, half rounding up, and the
-`order_ack` echoes the canonical price. Volumes are *not* rounded: a
-volume that is not a multiple of the lot size is rejected outright,
-because changing a volume changes your risk.
+## 4. Acknowledgements
 
-**3. You are filled at the resting order's price, never yours.** Buy with
-a limit above the best ask and you get price improvement, at the maker's
-limit.
+#### `order_ack`
+| Field | Type | Description |
+| --- | --- | --- |
+| `order_id` | string | Server-assigned. Use for cancellation |
+| `client_order_id` | string | Echoed |
+| `instrument_id` | string | Echoed |
+| `side` | string | Echoed |
+| `price` | float | **After** tick rounding |
+| `volume` | int | Echoed |
 
-**4. Short sale proceeds count toward your buying power.** Selling short
-credits cash immediately, and that cash can fund a purchase in another
-instrument. This is real leverage and it is deliberate. Your total risk
-is still capped, because the position limit binds on both sides.
+#### `order_rejected`
+| Field | Type | Description |
+| --- | --- | --- |
+| `client_order_id` | string | Echoed |
+| `reason` | string | `insufficient_buying_power` \| `position_limit_breached` \| `round_not_active` \| `unknown_instrument` \| `invalid_volume` \| `invalid_price` \| `rate_limited` |
 
-**5. Position limits are checked against the worst case.** The bound is
-your position plus *all* your resting volume on that side, not your
-current position. Long 10 with 10 open buys is already at a limit of 20.
+#### `cancel_ack`
+| Field | Type | Description |
+| --- | --- | --- |
+| `order_id` | string | The cancelled order |
+| `instrument_id` | string | For book reconciliation |
+| `cancelled_volume` | int | Remaining volume released; zero if it had fully filled |
 
-**6. The server is the only source of truth.** Every `fill` carries your
-cash and your entire position map after that fill. Overwrite your local
-state from it. If your bookkeeping and the server's disagree, you are
-wrong.
+An IOC whose remainder is cancelled after matching receives an
+unprompted `cancel_ack` for it, after its fills. An IOC that fully fills
+receives none.
 
-## Scoring
+#### `cancel_rejected`
+| Field | Type | Description |
+| --- | --- | --- |
+| `order_id` | string | Echoed |
+| `reason` | string | `unknown_order` \| `not_your_order` \| `round_not_active` \| `rate_limited` |
 
-Realised P&L only: `final_cash - starting_cash`. Open positions are not
-marked to market in Phase 1, so a large open position at the bell is
-worth nothing to you.
+## 5. State
 
-Cash is held server-side as an exact integer count of 1/10000 of a
-currency unit, so the scoring figure is reproducible exactly from the
-trade tape.
+#### `state_snapshot`
+Sent after `auth_ok` and on `resync`. This is how a client recovers.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `session_id` | string | Current session |
+| `session_state` | string | `PENDING` \| `RUNNING` \| `ENDED` |
+| `server_time` | float | For clock offset |
+| `ends_at` | float \| null | Server time the session ends; null if unbounded |
+| `instruments` | array | Instrument config as visible to participants |
+| `cash` | float | Authoritative |
+| `positions` | object | Authoritative, full map |
+| `open_orders` | array | Your resting orders |
+| `books` | object | Full book for every instrument |
+
+## 6. Fills
+
+#### `fill`
+Sent only to the two counterparties of a match.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `order_id` | string | Your filled order |
+| `client_order_id` | string | Echoed |
+| `instrument_id` | string | |
+| `side` | string | Your side |
+| `price` | float | Always the resting order's price |
+| `volume` | int | Filled in this event; may be partial |
+| `remaining_volume` | int | Still resting; zero means done |
+| `aggressor` | bool | True if your order was the incoming one |
+| `cash` | float | Your cash after this fill. Authoritative |
+| `position` | object | Your full position map after this fill. Authoritative |
+
+## 7. Market data
+
+#### `book_update`
+Broadcast after any book change.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `instrument_id` | string | Which book |
+| `bids` | array | Price descending, `{"price": 99.5, "volume": 40}` aggregated per level |
+| `asks` | array | Price ascending, same shape |
+| `last_trade_price` | float \| null | Null before the first trade |
+
+A full snapshot, never a delta: simple and self-healing. Under load the
+server may coalesce several changes into one update; the latest state is
+always sent.
+
+#### `trade_tick`
+Broadcast for every match, to every connection. Anonymous: no order, team
+or connection id.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `instrument_id` | string | |
+| `price` | float | Execution price |
+| `volume` | int | Traded in this match |
+| `aggressor_side` | string | `"bid"` \| `"ask"`: the incoming order's side |
+
+`trade_tick` is never coalesced, so the public tape is complete.
+
+## 8. Session lifecycle
+
+#### `round_started`
+| Field | Type | Description |
+| --- | --- | --- |
+| `round_id` | string | Appears in the trade tape |
+| `instruments` | array | `{id, starting_price, tick_size, lot_size}`. Never fair value or process parameters |
+| `starting_cash` | float | Same for everyone |
+| `position_limit` | int | Per instrument, both directions |
+| `duration_s` | float | Planned length |
+| `ends_at` | float | Server time it ends |
+| `server_time` | float | Server time now |
+
+Clients compute `offset = server_time - local_now` once, then
+`remaining = ends_at - (local_now + offset)`, which survives a laptop
+with a wrong clock.
+
+#### `news_event`
+| Field | Type | Description |
+| --- | --- | --- |
+| `event_id` | string | Stable, for deduplication across a resync |
+| `headline` | string | Admin-authored |
+| `affected_instruments` | array | |
+
+The fair value jump is applied server-side and never broadcast.
+Inferring its size from the book is the skill being tested.
+
+#### `round_ended`
+| Field | Type | Description |
+| --- | --- | --- |
+| `round_id` | string | Matches `round_started` |
+| `final_cash` | float | |
+| `final_positions` | object | |
+| `realised_pnl` | float | `final_cash - starting_cash`. Authoritative for scoring |
+
+When the admin ends a round, new submissions stop, every order already
+queued is processed, all open orders are cancelled, then `round_ended`
+is sent.
+
+## 9. Protocol errors
+
+#### `error`
+`order_rejected` is a business refusal of a well-formed order. `error`
+is a protocol failure: the frame could not be understood, or the sender
+was not entitled to send it.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `code` | string | `malformed_frame` \| `unknown_message_type` \| `schema_violation` \| `not_authorised` \| `not_admin` \| `internal_error` |
+| `message` | string | Safe to display. Never a stack trace |
+| `detail` | object \| null | Structured context, such as the offending field |
+| `client_order_id` | string \| null | Echoed when recoverable |
+
+**An `error` does not close the connection,** except for authentication
+failures (2), and a client sending more than 20 errors in 10 seconds,
+which is closed with `4008`.
+
+#### Close codes
+
+| Code | Meaning |
+| --- | --- |
+| `4001` | Invalid or expired token |
+| `4002` | No `auth` within 5 seconds |
+| `4003` | Non-`auth` message while unauthenticated |
+| `4008` | Protocol error rate exceeded |
+| `4009` | Disconnected by the admin |
+
+## 10. Admin protocol
+
+The admin dashboard is an ordinary protocol client; admin capability is
+`role == "admin"` in `auth_ok`. Any message here from a `participant`
+connection gets `error.code = not_admin` and has no effect.
+
+**The admin never sees fair value either.** No admin message carries a
+fair value, a process parameter or a jump size: the admin screen is
+often on a projector. `admin_health` gives derived signals instead.
+
+**Serialisation.** `admin_start_round`, `admin_end_round` and
+`admin_cancel_team_orders` go through the same order queue as orders, so
+"end the round" can never race a fill. `admin_inject_news` changes fair
+value, not the book, so it goes to the price process and applies at its
+next tick.
+
+Every admin command carries a client-assigned `request_id`, echoed in
+`admin_ack` or `admin_rejected`.
+
+### Admin to server
+
+#### `admin_start_round`
+| Field | Type | Description |
+| --- | --- | --- |
+| `round_id` | string | |
+| `instruments` | array | Full `InstrumentConfig` each ([`design.md`](design.md) 6.4) |
+| `starting_cash` | float | |
+| `position_limit` | int | Uniform across instruments |
+| `duration_s` | float | |
+| `seed` | int | Price process RNG seed, recorded in the tape |
+
+#### `admin_end_round`
+| Field | Type | Description |
+| --- | --- | --- |
+| `round_id` | string | Must match the running round |
+
+#### `admin_inject_news`
+| Field | Type | Description |
+| --- | --- | --- |
+| `event_id` | string | Idempotent: a repeat is acknowledged and ignored |
+| `headline` | string | |
+| `affected_instruments` | array | Broadcast |
+| `jumps` | object | `instrument_id` to fractional jump. **Never broadcast** |
+
+#### `admin_practice_control`
+| Field | Type | Description |
+| --- | --- | --- |
+| `action` | string | `pause` \| `resume` \| `reset` |
+
+#### `admin_cancel_team_orders`
+| Field | Type | Description |
+| --- | --- | --- |
+| `team_id` | string | Every resting order of that team is cancelled |
+
+The valve for a runaway algorithm: it stops the damage without
+disconnecting the team.
+
+#### `admin_disconnect`
+| Field | Type | Description |
+| --- | --- | --- |
+| `connection_id` | string | Closed with `4009` |
+| `reason` | string | Logged and sent in the close frame |
+
+Closing the connection cancels the orders it submitted (2). The team's
+other connections keep theirs; `admin_cancel_team_orders` clears all.
+
+### Server to admin
+
+#### `admin_snapshot`
+Sent after `auth_ok` for an admin, and on `resync`.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `session` | object | `{session_id, session_state, ends_at, round_id, starting_cash, position_limit}` |
+| `instruments` | array | Config as run, **less** process parameters and seed |
+| `teams` | array | As in `admin_leaderboard` |
+| `connections` | array | As in `admin_connections` |
+
+#### `admin_leaderboard`
+| Field | Type | Description |
+| --- | --- | --- |
+| `as_of` | float | Server time computed |
+| `entries` | array | `{rank, team_id, display_name, realised_pnl, cash, positions, open_order_count, order_count, fill_count}`, by `realised_pnl` descending |
+
+Reflects every fill, pushed every **250 ms** as a full snapshot.
+
+#### `admin_connections`
+| Field | Type | Description |
+| --- | --- | --- |
+| `connections` | array | `{connection_id, team_id, display_name, role, connected_at, last_seen, orders_submitted, orders_rejected, fills, errors}` |
+
+Same cadence. Bot connections appear here: the one place bots are
+visible, which is why admin messages must never reach a participant.
+
+#### `admin_health`
+Per-instrument signals with nothing from which fair value could be
+recovered.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `instrument_id` | string | |
+| `best_bid` / `best_ask` | float \| null | Already public |
+| `spread_ticks` | int \| null | Null when a side is empty |
+| `bid_depth` / `ask_depth` | int | Resting volume per side |
+| `trades_last_60s` | int | Activity check |
+| `quoting_ok` | bool | A two-sided market for the last 10 seconds |
+
+#### `admin_event`
+Append-only operational log.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `event_id` | string | Stable, for deduplication |
+| `timestamp` | float | |
+| `severity` | string | `info` \| `warn` \| `error` |
+| `category` | string | `session` \| `connection` \| `order` \| `bot` \| `practice` \| `system` |
+| `message` | string | |
+| `detail` | object \| null | |
+
+#### `admin_ack`
+| Field | Type | Description |
+| --- | --- | --- |
+| `request_id` | string | Echoed |
+| `command` | string | The command acknowledged |
+| `detail` | object \| null | Command-specific result |
+
+#### `admin_rejected`
+| Field | Type | Description |
+| --- | --- | --- |
+| `request_id` | string | Echoed |
+| `command` | string | Echoed |
+| `reason` | string | `round_already_running` \| `no_round_running` \| `round_id_mismatch` \| `unknown_team` \| `unknown_connection` \| `invalid_config` \| `practice_not_running` \| `duplicate_event_id` |
+
+## 11. Things that surprise people
+
+1. **If your connection drops, your resting orders are cancelled.**
+   Positions and cash remain. A sleeping laptop stops trading silently,
+   so keep it awake during a round.
+2. **Prices are snapped to the tick, volumes are not.** A price between
+   ticks rounds to the nearest (half up) and the ack echoes it. A volume
+   that is not a multiple of the lot size is rejected.
+3. **You trade at the resting order's price.** A buy limit above the
+   best ask gets price improvement.
+4. **Short sale proceeds count toward buying power.** That is real
+   leverage, and deliberate; the position limit still caps your risk.
+5. **Position limits use the worst case:** your position plus all your
+   resting volume on that side. Long 10 with 10 open buys is already at a
+   limit of 20.
+6. **The server is the only source of truth.** Every `fill` carries your
+   cash and full positions; overwrite your state from it.
+7. **Order messages are rate limited** (25 a second by default). Over the
+   limit you get `rate_limited`, not a disconnection.
+8. **Scoring is realised P&L only:** `final_cash - starting_cash`. An open
+   position at the bell is worth nothing.

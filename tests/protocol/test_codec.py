@@ -1,4 +1,4 @@
-"""Encoding, decoding and the failure paths. Spec 9."""
+"""Encoding, decoding and the failure paths. docs/protocol.md."""
 
 import json
 
@@ -28,7 +28,7 @@ def _decoder_for(name: str):
     return decode_client_message if name in CLIENT_TYPES else decode_server_message
 
 
-# --- round trip ------------------------------------------------------------
+# --- round trip -----------------------------------------------------------
 
 
 @pytest.mark.parametrize("name", sorted(SAMPLES))
@@ -64,7 +64,7 @@ def test_a_server_message_is_not_accepted_from_a_client() -> None:
     assert exc.value.code is ErrorCode.SCHEMA_VIOLATION
 
 
-# --- failure paths. Spec 9.9 -----------------------------------------------
+# --- failure paths. protocol.md 9 -----------------------------------------
 
 
 @pytest.mark.parametrize("raw", ["", "{", "not json", "[1,2,3]", '"a string"', "null"])
@@ -102,10 +102,10 @@ def test_a_known_type_with_bad_fields_is_a_schema_violation() -> None:
 
 
 def test_a_negative_price_never_decodes() -> None:
-    """Spec 5.5, D11. Belt and braces with the gateway's invalid_price check.
+    """design.md 5.5, D11. Belt and braces with the gateway's invalid_price check.
 
     A resting buy at a negative price would decrease reserved_cash and
-    manufacture buying power (spec 5.6), so the schema refuses one too.
+    manufacture buying power (design.md 5.6), so the schema refuses one too.
     """
     for price in (-1.0, 0.0):
         bad = json.loads(encode(SAMPLES["submit_order"]))
@@ -153,7 +153,7 @@ def test_error_detail_never_leaks_the_offending_input() -> None:
     assert "s3cret" not in json.dumps(exc2.value.detail)
 
 
-# --- admin gating. Spec 9.10 ----------------------------------------------
+# --- admin gating. protocol.md 10 -----------------------------------------
 
 
 def test_admin_types_are_exactly_the_admin_commands() -> None:
@@ -176,7 +176,7 @@ def test_no_server_to_admin_message_is_an_admin_command() -> None:
     assert not (ADMIN_MESSAGE_TYPES & SERVER_TYPES)
 
 
-# --- invariant 7: fair value never crosses the network. Spec 6.5 -----------
+# --- invariant 7: fair value never crosses the network. design.md 6.5 -----
 
 _FORBIDDEN_OUTBOUND = {
     "fair_value",
@@ -215,7 +215,7 @@ def test_no_server_to_client_message_can_carry_a_fair_value(cls) -> None:
         for name, field in model.model_fields.items():
             assert name not in _FORBIDDEN_OUTBOUND, (
                 f"{path}.{name} would let a fair value or process parameter "
-                f"reach a participant. Spec 6.5, invariant 7."
+                f"reach a participant. design.md 6.5, invariant 7."
             )
             for arg in (field.annotation, *getattr(field.annotation, "__args__", ())):
                 if isinstance(arg, type) and hasattr(arg, "model_fields"):
@@ -238,7 +238,7 @@ def test_process_parameters_are_inbound_only() -> None:
 
 
 def test_news_event_has_no_magnitude_field() -> None:
-    """Information asymmetry is the skill being tested. Spec 9.8."""
+    """Information asymmetry is the skill being tested. protocol.md 8."""
     assert set(m.NewsEvent.model_fields) == {
         "timestamp",
         "seq",
@@ -249,7 +249,7 @@ def test_news_event_has_no_magnitude_field() -> None:
     }
 
 
-# --- envelope. Spec 9.1 ----------------------------------------------------
+# --- envelope. protocol.md 1 ----------------------------------------------
 
 
 def test_encoder_issues_monotonic_sequence_numbers() -> None:

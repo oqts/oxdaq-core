@@ -1,4 +1,4 @@
-"""The integer/decimal boundary. Spec 3.
+"""The integer/decimal boundary. design.md 3.
 
 The milestone 1 definition of done requires the conversion to round-trip
 exactly over a property-based test, so that is what most of this file is.
@@ -45,7 +45,7 @@ tick_scales = st.sampled_from([TickScale.from_config(t) for t in TICK_SIZES])
 price_ticks = st.integers(min_value=1, max_value=MAX_PRICE_TICKS)
 
 
-# --- the round trip, which is the milestone 1 requirement ------------------
+# --- the round trip, which is the milestone 1 requirement -----------------
 
 
 @given(scale=tick_scales, ticks=price_ticks)
@@ -78,7 +78,7 @@ def test_to_wire_is_the_nearest_float_to_the_exact_decimal(
 def test_notional_is_exact_integer_arithmetic(
     scale: TickScale, ticks: int, volume: int
 ) -> None:
-    """Notional must equal the exact decimal, scaled. Spec 3.2.
+    """Notional must equal the exact decimal, scaled. design.md 3.2.
 
     This is the figure the leaderboard is decided by, so it is not allowed
     to be approximately right.
@@ -88,7 +88,7 @@ def test_notional_is_exact_integer_arithmetic(
     assert scale.notional(ticks, volume) == scale.price_units(ticks) * volume
 
 
-# --- normalisation ---------------------------------------------------------
+# --- normalisation --------------------------------------------------------
 
 
 @given(scale=tick_scales, ticks=st.integers(1, 10**9))
@@ -129,7 +129,7 @@ def test_builtin_round_would_have_disagreed() -> None:
     assert round(0.5) == 0
 
 
-# --- tick size validation. Spec 3.2 ---------------------------------------
+# --- tick size validation. design.md 3.2 ----------------------------------
 
 
 @pytest.mark.parametrize("tick_size", TICK_SIZES)
@@ -168,7 +168,7 @@ def test_the_float_check_this_guards_against_really_is_broken() -> None:
     assert Decimal("0.07") * TICK_SCALE == 700
 
 
-# --- cash. Spec 3.2, 5.7 ---------------------------------------------------
+# --- cash. design.md 3.2, design.md 5.7 -----------------------------------
 
 
 @given(units=st.integers(-(10**15), 10**15))
@@ -178,7 +178,7 @@ def test_cash_to_wire_matches_the_exact_decimal(units: int) -> None:
 
 @given(units=st.integers(-(10**15), 10**15))
 def test_cash_survives_a_decimal_round_trip(units: int) -> None:
-    """Cash never returns from the wire (spec 5.7), so this is the path
+    """Cash never returns from the wire (design.md 5.7), so this is the path
     that matters: config load and reading a trade tape back."""
     exact = Decimal(units) / TICK_SCALE
     assert cash_units_from_decimal(exact) == units
@@ -194,7 +194,7 @@ def test_float_cash_is_refused() -> None:
         cash_units_from_decimal(1.5)
 
 
-# --- the stated domain -----------------------------------------------------
+# --- the stated domain ----------------------------------------------------
 
 
 def test_the_round_trip_is_documented_as_bounded_and_the_bound_is_real() -> None:
@@ -220,7 +220,7 @@ def test_the_round_trip_is_documented_as_bounded_and_the_bound_is_real() -> None
 def test_price_units_and_cash_units_are_the_same_unit() -> None:
     """A notional and a cash balance must be directly comparable integers.
 
-    Spec 5.5 checks ``notional <= cash - reserved_cash``. That comparison
+    design.md 5.5 checks ``notional <= cash - reserved_cash``. That comparison
     is only meaningful if both sides count the same thing.
     """
     scale = TickScale.from_config("0.01")

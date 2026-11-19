@@ -2,7 +2,7 @@
 
 Every value here appears verbatim in JSON on the wire. Changing a member
 name is a protocol change: bump ``PROTOCOL_VERSION`` and update
-``planning/OXDAQ-PLAN.md`` in the same change set (spec 15.2).
+``docs/protocol.md`` in the same change set (build.md 2.1).
 
 All members subclass ``str`` so that ``Side.BID == "bid"`` holds and
 pydantic serialises them without a custom encoder.
@@ -27,7 +27,7 @@ __all__ = [
 
 
 class Side(StrEnum):
-    """Order side. Spec 9.3."""
+    """Order side. protocol.md 3."""
 
     BID = "bid"
     ASK = "ask"
@@ -41,13 +41,13 @@ class Side(StrEnum):
         """+1 for a buy, -1 for a sell.
 
         The sign a fill applies to a position: buys increase it, sells
-        decrease it (spec 5.6).
+        decrease it (design.md 5.6).
         """
         return 1 if self is Side.BID else -1
 
 
 class SessionState(StrEnum):
-    """Spec 9.5."""
+    """protocol.md 5."""
 
     PENDING = "PENDING"
     RUNNING = "RUNNING"
@@ -55,10 +55,10 @@ class SessionState(StrEnum):
 
 
 class Role(StrEnum):
-    """Authorisation role, carried in ``auth_ok``. Spec 9.2.
+    """Authorisation role, carried in ``auth_ok``. protocol.md 2.
 
     There are exactly two, and ``bot`` is deliberately not one of them.
-    Spec 12.1 lists four *token* types, but only one distinction is
+    operations.md 3.1 lists four *token* types, but only one distinction is
     authorisation relevant: whether the connection may send ``admin_*``
     messages. Team, bot and practice tokens all grant ``PARTICIPANT``.
 
@@ -73,7 +73,7 @@ class Role(StrEnum):
 
 
 class RejectReason(StrEnum):
-    """Business rejection of a well-formed order. Spec 9.4, 5.5.
+    """Business rejection of a well-formed order. protocol.md 4, design.md 5.5.
 
     Distinct from ``ErrorCode``, which covers frames that could not be
     understood at all.
@@ -88,7 +88,7 @@ class RejectReason(StrEnum):
 
 
 class CancelRejectReason(StrEnum):
-    """Spec 9.4."""
+    """protocol.md 4."""
 
     UNKNOWN_ORDER = "unknown_order"
     NOT_YOUR_ORDER = "not_your_order"
@@ -96,7 +96,7 @@ class CancelRejectReason(StrEnum):
 
 
 class ErrorCode(StrEnum):
-    """Protocol-level failure. Spec 9.9.
+    """Protocol-level failure. protocol.md 9.
 
     The frame could not be understood, or the sender was not entitled to
     send it. A business rejection of a *valid* order is ``RejectReason``.
@@ -111,7 +111,7 @@ class ErrorCode(StrEnum):
 
 
 class CloseCode(IntEnum):
-    """WebSocket close codes in the private-use range. Spec 9.9."""
+    """WebSocket close codes in the private-use range. protocol.md 9."""
 
     INVALID_TOKEN = 4001
     AUTH_TIMEOUT = 4002
@@ -121,7 +121,7 @@ class CloseCode(IntEnum):
 
 
 class PracticeAction(StrEnum):
-    """Spec 9.10 ``admin_practice_control``."""
+    """protocol.md 10 ``admin_practice_control``."""
 
     PAUSE = "pause"
     RESUME = "resume"
@@ -129,7 +129,7 @@ class PracticeAction(StrEnum):
 
 
 class AdminAction(StrEnum):
-    """The admin commands, for use in ``admin_ack.command``. Spec 9.10."""
+    """The admin commands, for use in ``admin_ack.command``. protocol.md 10."""
 
     START_ROUND = "admin_start_round"
     END_ROUND = "admin_end_round"
@@ -140,7 +140,7 @@ class AdminAction(StrEnum):
 
 
 class AdminRejectReason(StrEnum):
-    """Spec 9.10 ``admin_rejected``."""
+    """protocol.md 10 ``admin_rejected``."""
 
     ROUND_ALREADY_RUNNING = "round_already_running"
     NO_ROUND_RUNNING = "no_round_running"
@@ -153,7 +153,7 @@ class AdminRejectReason(StrEnum):
 
 
 class AdminSeverity(StrEnum):
-    """Spec 9.10 ``admin_event``."""
+    """protocol.md 10 ``admin_event``."""
 
     INFO = "info"
     WARN = "warn"
@@ -161,7 +161,7 @@ class AdminSeverity(StrEnum):
 
 
 class AdminEventCategory(StrEnum):
-    """Spec 9.10 ``admin_event``."""
+    """protocol.md 10 ``admin_event``."""
 
     SESSION = "session"
     CONNECTION = "connection"

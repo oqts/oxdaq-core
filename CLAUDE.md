@@ -1,181 +1,120 @@
 # oxdaq-core: agent guidance
 
 Read `../.github/CLAUDE.md` first (org rules, ownership boundary, house
-rules). This file adds what is specific to the OXDAQ engine. Human
-overview is `README.md`.
+rules). Human overview is `README.md`.
 
-## Authoritative spec
+## The spec
 
-`../planning/OXDAQ-PLAN.md` **v2.1** is the contract. All section
-numbers below are v2.1 numbering, which is v2.0 numbering plus sections
-9.9 (`error`), 9.10 (admin protocol) and 6.6 (non-negativity). It states:
-do not deviate from these decisions without updating this document first.
-Treat that literally.
+`docs/` is the contract (spec 3.0). Start at `docs/README.md`.
+References look like `design 2.4`: file, then section. Do not deviate
+from the spec without changing it in the same PR; a new design decision
+also gets a row in `docs/decisions.md`. Flag contradictions, never
+resolve them silently.
 
-v1.0 section numbers appear in older documents and are **not** valid
-here. `../planning/CLAUDE.md` records which documents still carry them.
-
-Related: `../planning/ARCHITECTURE.md` (where OXDAQ sits in the estate),
-`../oqts-design/brand.md` (all dashboard styling).
-
-## Repo layout
-
-A uv workspace with two packages. The split is not cosmetic.
+## Layout
 
 ```
-packages/oqts-client/src/oqts/     published to PyPI, imported as `oqts`
-    protocol/  enums, messages, codec        <- SHARED, frozen
-packages/oxdaq/src/oxdaq/          the server, never published
-    units.py   TICK_SCALE, to_wire/from_wire <- SERVER ONLY
-tests/protocol/                    suites + samples.py
-tests/golden/                      one frozen JSON frame per message type
-docs/protocol.md                   participant-facing protocol reference
+packages/oqts-client/src/oqts/   published to PyPI as oqts-client, imported as `oqts`
+    protocol/                    enums, messages, codec   <- SHARED, frozen
+packages/oxdaq/src/oxdaq/        the server, never published
+    units.py                     TICK_SCALE, to_wire/from_wire <- SERVER ONLY
+packages/oxdaq-engine/           C++ engine + nanobind module (arrives with E1)
+tests/protocol/                  suites, samples.py
+tests/golden/                    one frozen JSON frame per message type
+docs/                            the spec
 ```
 
-- **Message shapes are shared.** The server, the client, the bots and both
-  dashboards all need them, so they live in the published package.
-- **Integer conversion is server-only.** The client is float-native
-  throughout (`get_cash() -> float`), so shipping tick machinery to
-  participants would contradict spec 3.3.
-- **The server depends on the client, not the reverse.** Bots connect over
-  localhost using the participant protocol (spec 7.1), so the server needs
-  the client package anyway, and this direction makes drift impossible.
+- Message shapes are shared (server, client, bots, dashboards all need
+  them); integer conversion is server-only (the client is float-native).
+- The server depends on the client, not the reverse.
+- Everything a participant needs is importable from `oqts` directly.
 
-Everything a participant needs is importable from `oqts` directly. If a
-strategy ever has to reach below the top level, that is an ergonomics bug
-in this package.
+## The protocol is frozen
 
-## The schema is frozen
+`tests/golden/` pins every message byte for byte; `test_codec.py` walks
+every outbound model to prove no field can carry a fair value. **A golden
+failure is the freeze working.** Never regenerate to make it pass. A
+protocol change is all of: bump `PROTOCOL_VERSION`, edit
+`docs/protocol.md` in the same PR, update `tests/protocol/samples.py`,
+run `uv run python tests/protocol/regenerate_golden.py`.
 
-`tests/golden/` pins every message byte for byte, and
-`tests/protocol/test_codec.py` pins invariant 7 structurally: there is a
-test that walks every outbound model and fails if any field could carry a
-fair value or a process parameter.
+**Protocol v2 is authorised** (D28 to D31): `order_type`, `trade_tick`,
+`rate_limited`, `PROTOCOL_VERSION = 2`. Claude implements it once,
+before milestone 2. After that the freeze applies to v2.
 
-**A failure in `test_golden.py` is not a broken test. It is the freeze
-working.** Do not regenerate the corpus to make it pass. A protocol change
-is all four of: bump `PROTOCOL_VERSION`, edit `../planning/OXDAQ-PLAN.md`
-section 9 in the same change set, update `tests/protocol/samples.py`, then
-`uv run python tests/protocol/regenerate_golden.py`.
+Ruff does not touch Markdown (it would reformat code blocks in docs).
 
-Ruff is configured not to touch Markdown: it reformats Python code blocks
-inside README files, which is a surprise during a lint run.
-
-## Toolchain
-
-uv for environments and locking, Python pinned to 3.13, pytest for the
-correctness suites, ruff for lint and format. Production containers use
-`python:3.13-slim` so local and server match.
+## Commands
 
 ```bash
-uv sync                  # create/refresh .venv from uv.lock
-uv run pytest            # full suite
-uv run pytest -k book    # one area
-uv run ruff check .      # lint
-uv run ruff format .     # format
+uv sync
+uv run pytest            # uv run pytest -k book for one area
+uv run ruff check .
+uv run ruff format .
 ```
 
-Never `pip install` into the venv directly and never edit `uv.lock` by
-hand. Adding a dependency is a design decision: propose it first.
+Never `pip install` into the venv; never hand-edit `uv.lock`. A new
+dependency is a design decision: propose it first. C++ commands: build
+2.2.
 
-## Ownership in this repo
+## Ownership
 
-Alec hand-writes, in neovim. Do not write these, do not sketch them
-inline "to illustrate":
+Alec writes by hand. Do not write these, and do not sketch them inline
+"to illustrate":
 
-- The order book and matching logic (spec 4).
-- Cash and position accounting, and order validation (spec 5).
-- The price process engine and its maths (spec 6).
-- Bot strategy logic (spec 7.2). The bot runner harness is Claude's.
-- Every async surface: the WebSocket gateway, the single-consumer order
-  loop, broadcast dispatch, and the client library's connection and
-  event dispatch (spec 2.3, 2.4, 8).
+- The order book and matching (design 4), Python **and** C++: every line
+  under `packages/oxdaq-engine/cpp/`, and the nanobind binding code.
+- Accounting and validation (design 5).
+- The price process and its maths (design 6).
+- Bot strategy logic (design 7.2).
+- Every async surface: gateway, order loop, broadcast, disconnect sweep,
+  rate limiter, `oqts.aio` and the `Exchange` thread bridge (design 2.3,
+  2.4, 5.5; client 3).
 
-Claude writes: packaging, CI, ruff/pytest config, the message schema and
-codec (spec 3, 9), test harnesses and fixtures, the trade tape writer
-(spec 11), token issuance and auth (spec 12), both dashboards (spec 13),
-and anything that ships to a browser or a server.
+Claude writes: packaging, CI, tool config, CMake and presets, the schema
+and codec, the shared engine suite and differential test, fuzz and
+benchmark harnesses, fixtures, the bot runner, token issuance and auth,
+the trade tape writer, dashboards, deployment.
 
-When Alec is about to write one of his: supply the type signatures, the
-invariants, the failure modes, and links to the exact docs needed
-(asyncio queue and task semantics, `sortedcontainers.SortedList` key
-behaviour, numpy RNG usage, dataclass and typing constructs). Then offer
-the test that proves it.
+For Alec's parts: give signatures, invariants, failure modes and links to
+the exact docs (asyncio, `sortedcontainers`, numpy RNG, C++ and nanobind
+features), then offer the test that proves it.
 
-## Invariants that must never be broken
+## Invariants
 
-Violating any of these is a correctness bug, not a style question.
+The canonical list is design 8. Breaking one is a correctness bug:
 
-1. **One queue, one consumer.** All order processing serialises through a
-   single asyncio queue with exactly one consumer coroutine. No locks, no
-   concurrency inside the matching engine, no second consumer (spec 2.3).
-2. **Check and reserve are atomic.** Any validation that reads mutable
-   participant state must take its reservation in the same synchronous
-   step, with **no `await` between them**. Otherwise two orders validate
-   against the same cash before either is processed and both are
-   accepted. This is the single easiest way to break the system (spec 2.4).
-3. **Server time only.** Time priority comes from server enqueue order.
-   Client timestamps are read for nothing that affects ordering (spec 2.3).
-4. **Integers inside, decimals at the boundary.** Prices are integer
-   ticks, cash is integer accounting units. Only the codec touches a
-   float. No epsilon comparison exists anywhere in the engine (spec 3).
-5. **Fill price is the resting order's price**, never the aggressor's
-   (spec 4.3).
-6. **Position limits bind on both sides** as worst-case projections. The
-   bounded quantities are invariant under fills and move only on accept
-   and cancel (spec 5.3).
-7. **Fair value never crosses the network.** Latent fair values reach bots
-   through in-process shared state only. No message type carries them, and
-   no news event discloses jump magnitude (spec 6.5, 9.8).
-8. **Bots are indistinguishable from participants.** Same protocol, same
-   ID namespace, randomly assigned per session. No flag, field, ID
-   pattern or timing tell identifies a bot (spec 7.1).
-9. **The server is the sole source of truth** for cash and positions.
-   Every fill carries authoritative cash and the full position map; the
-   client cache overwrites from it. Client state never feeds validation
-   (spec 5.7).
-10. **Rejected orders never reach the matching engine.** Validation is
-    synchronous and pre-queue (spec 5.5).
-11. **In-memory only in Phase 1.** No database, no message broker. The
-    trade tape export is the only persistence (spec 16).
+1. One queue, one consumer.
+2. Check and reserve atomic: no `await` between them.
+3. Priority is the server's arrival sequence; client time affects nothing.
+4. Integers inside, decimals only in the codec; no epsilon anywhere.
+5. Fill at the resting order's price.
+6. Position bounds bind both sides and are invariant under fills.
+7. Fair value never crosses the network, admin messages included.
+8. Bots are indistinguishable from participants.
+9. The server is the source of truth for cash and positions.
+10. Rejected orders never reach the engine.
+11. The two engines give exactly equal fills and books; engine calls hold
+    the GIL and never block.
+12. Orders belong to their connection; the disconnect sweep goes through
+    the queue and touches only that connection's orders.
+13. `trade_tick` is never coalesced or dropped.
+14. In memory only; the trade tape is the only persistence.
 
 ## Build order
 
-Strictly sequential; a later milestone cannot be tested without the
-earlier ones (spec 15.4).
+Build 4. Milestone 1 is done at v1 and reopens once for v2; milestone 2
+(the Python reference engine) is current. The engine track (E1, E2)
+depends on milestone 2 only. Do not start a milestone before the
+previous one is done. Never run a live round with untuned bots (design
+7.3).
 
-1. ~~Message schema and codec~~ **done**, frozen. 29 message types,
-   `PROTOCOL_VERSION = 1`
-2. Matching engine + correctness suite  <- **current**
-3. Session manager, accounting, validation + suite
-4. WebSocket gateway, auth, resync
-5. Price process engine
-6. `oqts-client` library
-7. Bot ecosystem + dry-run protocol (spec 7.3)
-8. Trade tape export
-9. Student dashboard
-10. Admin dashboard
-11. Continuous practice exchange
-12. Full integration test, 20+ connections
+## Open
 
-Do not start a milestone before the previous one's definition of done is
-met. Do not run a live round with untuned bots (spec 7.3).
-
-## Open items
-
-Not blocking milestone 1, but unresolved. Raise rather than assume.
-
-- **Practice exchange parameters** (spec 14.3) are provisional and need
-  confirmation before milestone 11. The substantive one: whether the
-  practice exchange runs a separate bot parameter set from competition.
-- **The bot manager interface** between `oxdaq-core` (runner harness) and
-  `oxdaq-ops` (implementations and parameters) is not designed. Agree the
-  contract before writing either side.
-- **`README.md` is stale against v2.1.** It says Python 3.11+, lists ten
-  milestones rather than twelve, points at `oqts.ox.ac.uk` rather than
-  `oxdaq.oqts.org`, and predates the practice exchange. Not blocking.
-- **A depth limit on `book_update`** (spec 16). Watch at milestone 12
-  under 20+ connections with noise traders running.
-- **A dashboard subsection of `brand.md`** is planned, covering tabular
-  density, live-updating numeric cells and status treatment. Until it
-  exists, follow `brand.md` as written.
+- Dashboard stack: decide before milestone 9 (build 2.3).
+- Practice exchange parameters are provisional (operations 5.2); confirm
+  before milestone 11.
+- The bot runner interface with `oxdaq-ops` is not designed; agree it
+  before either side is written.
+- A dashboard subsection of `brand.md` is planned; until then follow
+  `brand.md` as written.

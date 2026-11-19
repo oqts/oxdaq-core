@@ -1,20 +1,20 @@
-"""The OXDAQ wire protocol. Spec 9.
+"""The OXDAQ wire protocol. docs/protocol.md.
 
 Every message that crosses the network, in both directions, is defined
 here and nowhere else. This module is **frozen**: adding, removing,
 renaming or retyping a field is a protocol change, which means bumping
 ``PROTOCOL_VERSION``, regenerating the golden corpus under
-``tests/golden/``, and updating ``planning/OXDAQ-PLAN.md`` in the same
-change set (spec 15.2).
+``tests/golden/``, and updating ``docs/protocol.md`` in the same
+change set (build.md 2.1).
 
-Pydantic at the boundary, plain dataclasses inside (spec 15.2, D15).
+Pydantic at the boundary, plain dataclasses inside (build.md 2.1, D15).
 Validation belongs here and nowhere else: by the time a message reaches
 the session manager it is already known to be well-formed, and by the
 time it reaches the matching engine it is already known to be legal.
 
 Prices and cash appear here as ``float``, because that is what a
 participant sees. The conversion to and from integer ticks and accounting
-units happens in ``oxdaq.units`` and nowhere else (spec 3.3).
+units happens in ``oxdaq.units`` and nowhere else (design.md 3.3).
 """
 
 from typing import Annotated, Final, Literal
@@ -37,11 +37,11 @@ from .enums import (
 
 PROTOCOL_VERSION: Final[int] = 1
 """Sent in ``auth_ok``. A client whose version differs must fail loudly at
-startup rather than degrade silently (spec 9.2)."""
+startup rather than degrade silently (protocol.md 2)."""
 
 
 class _Message(BaseModel):
-    """Envelope common to every message in both directions. Spec 9.1."""
+    """Envelope common to every message in both directions. protocol.md 1."""
 
     model_config = ConfigDict(
         extra="forbid",  # an unknown field is a schema violation, not a courtesy
@@ -53,13 +53,13 @@ class _Message(BaseModel):
     timestamp: float = Field(
         description="Unix seconds, millisecond precision. Server-assigned "
         "outbound. Ignored for ordering inbound: time priority is server "
-        "enqueue order (spec 2.3)."
+        "enqueue order (design.md 2.3)."
     )
     seq: int = Field(
         ge=0,
         description="Monotonic per connection. Diagnostic only: WebSocket "
         "runs over TCP, so a gap can only mean a server bug. Recovery from "
-        "a lost connection is `resync`, not seq replay (spec 9.1).",
+        "a lost connection is `resync`, not seq replay (protocol.md 1).",
     )
 
 
@@ -80,14 +80,14 @@ class _Value(BaseModel):
 
 
 class BookLevel(_Value):
-    """One aggregated price level. Spec 9.7."""
+    """One aggregated price level. protocol.md 7."""
 
     price: Price
     volume: Volume
 
 
 class BookSnapshot(_Value):
-    """One instrument's full book. Spec 9.7.
+    """One instrument's full book. protocol.md 7.
 
     A full snapshot, never a delta: simpler to implement and to consume,
     self-healing, and negligible at 20 to 80 participants.
@@ -101,7 +101,7 @@ class BookSnapshot(_Value):
 
 
 class OpenOrder(_Value):
-    """A resting order of yours, as it appears in `state_snapshot`. Spec 9.5."""
+    """A resting order of yours, as it appears in `state_snapshot`. protocol.md 5."""
 
     order_id: OrderId
     client_order_id: ClientOrderId
@@ -113,7 +113,7 @@ class OpenOrder(_Value):
 
 
 class InstrumentPublic(_Value):
-    """Instrument config as visible to participants. Spec 9.8.
+    """Instrument config as visible to participants. protocol.md 8.
 
     Fair value and process parameters are **never** exposed. This model is
     the reason invariant 7 survives: there is no field here to put them in.
@@ -126,12 +126,12 @@ class InstrumentPublic(_Value):
 
 
 # ---------------------------------------------------------------------------
-# Client to server. Spec 9.3
+# Client to server. protocol.md 3
 # ---------------------------------------------------------------------------
 
 
 class Auth(_Message):
-    """First message on every connection. Spec 9.2.
+    """First message on every connection. protocol.md 2.
 
     Tokens never appear in the URL: that would place them in Caddy access
     logs, proxy logs, browser history and shell history, and the student
@@ -159,18 +159,18 @@ class CancelOrder(_Message):
 
 
 class Resync(_Message):
-    """Requests a full `state_snapshot`. Spec 9.3."""
+    """Requests a full `state_snapshot`. protocol.md 3."""
 
     type: Literal["resync"] = "resync"
 
 
 # ---------------------------------------------------------------------------
-# Server to client: acknowledgements. Spec 9.4
+# Server to client: acknowledgements. protocol.md 4
 # ---------------------------------------------------------------------------
 
 
 class AuthOk(_Message):
-    """Spec 9.2."""
+    """protocol.md 2."""
 
     type: Literal["auth_ok"] = "auth_ok"
     protocol_version: int
@@ -214,16 +214,15 @@ class CancelRejected(_Message):
 
 
 # ---------------------------------------------------------------------------
-# Server to client: state. Spec 9.5
+# Server to client: state. protocol.md 5
 # ---------------------------------------------------------------------------
 
 
 class StateSnapshot(_Message):
     """Sent after `auth_ok` and on `resync`. The reconnection mechanism.
 
-    Spec 9.5. Resting orders survive a disconnection (spec 8.4), which is
-    exactly why this exists: on reconnect the cache is rebuilt from
-    authoritative server state rather than assumed.
+    protocol.md 5. On reconnect the client rebuilds its cache from this
+    authoritative state rather than assuming anything survived.
     """
 
     type: Literal["state_snapshot"] = "state_snapshot"
@@ -239,17 +238,17 @@ class StateSnapshot(_Message):
 
 
 # ---------------------------------------------------------------------------
-# Server to client: fills. Spec 9.6
+# Server to client: fills. protocol.md 6
 # ---------------------------------------------------------------------------
 
 
 class Fill(_Message):
-    """Sent only to the two counterparties of a trade. Spec 9.6.
+    """Sent only to the two counterparties of a trade. protocol.md 6.
 
     Carries authoritative `cash` and the **full** position map. The client
     overwrites its cache from these before calling `on_fill`, so client
     state self-corrects on every fill and cannot permanently diverge, even
-    if a participant's algorithm mishandles an event (spec 5.7).
+    if a participant's algorithm mishandles an event (design.md 5.7).
     """
 
     type: Literal["fill"] = "fill"
@@ -257,7 +256,7 @@ class Fill(_Message):
     client_order_id: ClientOrderId
     instrument_id: InstrumentId
     side: Side
-    price: Price = Field(description="Always the resting order's price (spec 4.3)")
+    price: Price = Field(description="Always the resting order's price (design.md 4.3)")
     volume: Volume = Field(description="Units filled in this event. May be partial")
     remaining_volume: int = Field(ge=0)
     aggressor: bool
@@ -266,7 +265,7 @@ class Fill(_Message):
 
 
 # ---------------------------------------------------------------------------
-# Server to all: market data. Spec 9.7
+# Server to all: market data. protocol.md 7
 # ---------------------------------------------------------------------------
 
 
@@ -279,7 +278,7 @@ class BookUpdate(_Message):
 
 
 # ---------------------------------------------------------------------------
-# Server to all: session lifecycle. Spec 9.8
+# Server to all: session lifecycle. protocol.md 8
 # ---------------------------------------------------------------------------
 
 
@@ -299,7 +298,7 @@ class RoundStarted(_Message):
 
 
 class NewsEvent(_Message):
-    """Spec 9.8.
+    """protocol.md 8.
 
     Information asymmetry is the point. The fair value jump is applied
     server-side and never broadcast: participants get the headline and the
@@ -324,12 +323,12 @@ class RoundEnded(_Message):
 
 
 # ---------------------------------------------------------------------------
-# Server to client: protocol errors. Spec 9.9
+# Server to client: protocol errors. protocol.md 9
 # ---------------------------------------------------------------------------
 
 
 class Error(_Message):
-    """A frame that could not be understood, or was not permitted. Spec 9.9.
+    """A frame that could not be understood, or was not permitted. protocol.md 9.
 
     Not to be confused with `order_rejected`, which is a *business*
     rejection of a well-formed order. This does not close the connection:
@@ -352,7 +351,7 @@ class Error(_Message):
 
 
 # ---------------------------------------------------------------------------
-# Admin protocol. Spec 9.10
+# Admin protocol. protocol.md 10
 #
 # Admin capability is carried entirely by role == "admin" in auth_ok. Any
 # of these sent from a participant connection is answered with
@@ -366,7 +365,7 @@ class Error(_Message):
 
 
 class _AdminCommand(_Message):
-    """Common to every admin client-to-server message. Spec 9.10."""
+    """Common to every admin client-to-server message. protocol.md 10."""
 
     request_id: str = Field(
         min_length=1, max_length=64, description="Echoed in admin_ack/admin_rejected"
@@ -374,7 +373,7 @@ class _AdminCommand(_Message):
 
 
 class InstrumentConfigWire(_Value):
-    """Full instrument config, admin to server only. Spec 6.4.
+    """Full instrument config, admin to server only. design.md 6.4.
 
     This is the one place process parameters cross the network, and the
     direction is inbound: the admin is configuring the round. Nothing
@@ -382,7 +381,7 @@ class InstrumentConfigWire(_Value):
     `admin_snapshot.instruments` carries `InstrumentPublic` instead.
 
     `tick_size` is a **string**, deliberately. A float cannot represent
-    0.01, and the spec 3.2 check that a tick is an exact multiple of
+    0.01, and the design.md 3.2 check that a tick is an exact multiple of
     1/10000 is unreliable against one: 0.07 is a legal tick that the naive
     float check rejects, because 0.07 * 10_000 is 700.0000000000001.
     """
@@ -401,7 +400,7 @@ class InstrumentConfigWire(_Value):
         default_factory=list, description="Seconds since session start"
     )
     jump_sizes: list[float] = Field(
-        default_factory=list, description="Fractional. Must be > -1.0 (spec 6.6)"
+        default_factory=list, description="Fractional. Must be > -1.0 (design.md 6.6)"
     )
     # OU only
     theta: float | None = Field(default=None, description="Mean reversion speed")
@@ -431,7 +430,7 @@ class AdminInjectNews(_AdminCommand):
     jumps: dict[str, float] = Field(
         default_factory=dict,
         description="instrument_id -> fractional jump. Applied server-side, "
-        "NEVER broadcast. Values must be > -1.0 (spec 6.6).",
+        "NEVER broadcast. Values must be > -1.0 (design.md 6.6).",
     )
 
 
@@ -441,7 +440,7 @@ class AdminPracticeControl(_AdminCommand):
 
 
 class AdminCancelTeamOrders(_AdminCommand):
-    """The operational valve for a runaway algorithm. Spec 9.10.
+    """The operational valve for a runaway algorithm. protocol.md 10.
 
     Stops the damage without disconnecting the team, so they can fix and
     continue. Routed through the order queue, so the cancels take their
@@ -453,11 +452,11 @@ class AdminCancelTeamOrders(_AdminCommand):
 
 
 class AdminDisconnect(_AdminCommand):
-    """Closes one connection with code 4009. Spec 9.10.
+    """Closes one connection with code 4009. protocol.md 10.
 
-    Resting orders **survive** (spec 8.4). Disconnecting a team does not
-    flatten them: pair this with `admin_cancel_team_orders` if that is
-    what you meant.
+    Under protocol v1 the connection's resting orders survive; from v2 the
+    disconnect sweep cancels them (protocol.md 2). Either way the team's
+    other connections keep theirs: `admin_cancel_team_orders` clears all.
     """
 
     type: Literal["admin_disconnect"] = "admin_disconnect"
@@ -509,7 +508,7 @@ class AdminSessionInfo(_Value):
 
 
 class AdminSnapshot(_Message):
-    """The admin equivalent of `state_snapshot`. Spec 9.10.
+    """The admin equivalent of `state_snapshot`. protocol.md 10.
 
     `instruments` is `InstrumentPublic`, not `InstrumentConfigWire`: the
     process parameters and the seed the admin sent in are deliberately not
@@ -524,7 +523,7 @@ class AdminSnapshot(_Message):
 
 
 class AdminLeaderboard(_Message):
-    """Spec 9.10.
+    """protocol.md 10.
 
     Reflects every fill, pushed on a 250 ms cadence, coalescing everything
     in between. A full sorted table per fill at 80 participants is a large
@@ -544,7 +543,7 @@ class AdminConnections(_Message):
 
 
 class AdminHealth(_Message):
-    """Derived per-instrument operational signals. Spec 9.10.
+    """Derived per-instrument operational signals. protocol.md 10.
 
     Contains no fair value and nothing from which one could be recovered.
     `quoting_ok` is what replaces "show me the fair value next to the mid":
@@ -569,7 +568,7 @@ class AdminHealth(_Message):
 
 
 class AdminEvent(_Message):
-    """Append-only operational log. Spec 9.10."""
+    """Append-only operational log. protocol.md 10."""
 
     type: Literal["admin_event"] = "admin_event"
     event_id: str

@@ -1,7 +1,7 @@
 # Workspace root. Not a distributable package: the two members below are.
 #   packages/oqts-client  ->  published to PyPI, imported as `oqts`
 #   packages/oxdaq        ->  the server, never published
-# See planning/OXDAQ-PLAN.md 15.1, 15.2.
+# See docs/build.md 1 and 2.1.
 
 [tool.uv.workspace]
 members = ["packages/oqts-client", "packages/oxdaq"]
