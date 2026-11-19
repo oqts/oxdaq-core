@@ -238,7 +238,7 @@ def test_process_parameters_are_inbound_only() -> None:
 
 
 def test_news_event_has_no_magnitude_field() -> None:
-    """Information asymmetry is the skill being tested. protocol.md 8."""
+    """The jump is inferred, never sent. protocol.md 8, design.md 1.1."""
     assert set(m.NewsEvent.model_fields) == {
         "timestamp",
         "seq",

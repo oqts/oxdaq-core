@@ -5,10 +5,37 @@ practice exchange, and what must be true before a live round.
 
 ## 1. Scoring
 
-Phase 1 scores **realised P&L only**: `final_cash - starting_cash`. Open
-positions are not marked to market, so the score never depends on a thin
-or unstable mid. Cash is an exact integer ([`design.md`](design.md) 3),
-so the score is exactly reproducible from the tape.
+### 1.1 The score
+
+**Open positions are valued at the true price, revealed after the
+round:**
+
+```
+score = final_cash - starting_cash + sum_i positions[i] * final_fair_value[i]
+```
+
+`final_fair_value[i]` is the instrument's fair value at the round's
+last price process tick, rounded once to the nearest tick and written to
+the tape (2). It never depends on a thin or unstable mid, and a position
+opened in the last second is worth exactly what it is worth, so selling
+short at the bell gains nothing. Every term is an exact integer
+([`design.md`](design.md) 3), so the score is exactly reproducible from
+the tape.
+
+During a round only cash P&L is known (`round_ended.realised_pnl`, the
+live leaderboard); the score is computed from the tape after the round
+and announced then. Whether to add a penalty for risk or leftover
+inventory is open ([`design.md`](design.md) 1.2).
+
+### 1.2 Rounds and events
+
+A competition event runs **several short rounds**, so luck averages
+out, each a session with its own seed and parameter draw. An event
+follows the curriculum ([`design.md`](design.md) 1.1): market making,
+market making against informed traders, relative value, news, then a
+mixed final round. Results are reported **per round type and per
+instrument** as well as overall, so different styles visibly win in
+different places.
 
 ## 2. Trade tape
 
@@ -19,7 +46,8 @@ directory per round, written at round end.
 tape/<round_id>/
     trades.csv          one row per trade
     participants.csv    starting and final state per team
-    instruments.json    the round config exactly as run, with the seed
+    instruments.json    the round config exactly as run, with the seed,
+                        the bot parameter draw and final fair values
     news.csv            headlines and the jump actually applied
     orders.csv          every order and its outcome      [confidential]
     bots.csv            bot to team_id mapping           [admin only]
@@ -30,8 +58,8 @@ Numeric columns are **exact decimal strings**, never floats.
 | File | Columns |
 | --- | --- |
 | `trades.csv` | `round_id, seq, timestamp, instrument_id, price, volume, aggressor_team_id, resting_team_id, aggressor_side` |
-| `participants.csv` | `round_id, team_id, starting_cash, final_cash, realised_pnl, final_positions` (JSON map) |
-| `instruments.json` | Full `InstrumentConfig` per instrument, process parameters and RNG seed included |
+| `participants.csv` | `round_id, team_id, starting_cash, final_cash, realised_pnl, final_positions` (JSON map), `score` (1.1) |
+| `instruments.json` | Full `InstrumentConfig` per instrument, process parameters and RNG seed included; `final_fair_value` per instrument; the bot parameters drawn ([`design.md`](design.md) 7.4) |
 | `news.csv` | `event_id, timestamp, headline, affected_instruments, jump_applied` |
 | `orders.csv` | `order_id, client_order_id, team_id, instrument_id, side, order_type, price, volume, submitted_at, outcome, filled_volume` |
 | `bots.csv` | `team_id, bot_type, parameter_set_id` |
@@ -48,6 +76,15 @@ be replayed.
 2. `bots.csv` is **never published**. Bot rows stay unlabelled in
    `trades.csv`; publishing the mapping would break bot anonymity for
    every later round using the same bots.
+
+**Published as research data.** After an event, each round's
+`trades.csv`, `instruments.json` and `news.csv` are published to members
+as a dataset, with team ids replaced by per-round pseudonyms. This is
+where signal research happens ([`design.md`](design.md) 1.1): members
+study past rounds offline, and the next live round tests their ideas on
+data they have not seen. Publishing parameter draws reveals the bot
+distributions over time, which is acceptable: the edge is meant to come
+from the market, not from knowing the bots.
 
 ## 3. Tokens
 
@@ -84,7 +121,7 @@ comes from `oqts-design`; no hex value is hand-coded.
 
 | Panel | Updates on |
 | --- | --- |
-| Realised P&L (`cash - starting_cash`) | Every fill |
+| Cash P&L (`cash - starting_cash`), labelled as not the score (1.1) | Every fill |
 | Positions, with average entry price | Every fill |
 | Cash | Every fill |
 | Round timer, from `ends_at` and the clock offset | Every second |
@@ -94,7 +131,7 @@ comes from `oqts-design`; no hex value is hand-coded.
 
 | Panel | Description |
 | --- | --- |
-| Leaderboard | All teams by realised P&L, every 250 ms |
+| Leaderboard | All teams by cash P&L, every 250 ms. Indicative: the score comes from the tape (1.1) |
 | Round controls | Start with config, end, inject news |
 | Connections | Teams and bots, connection time, order counts |
 | Practice controls | Pause, resume, reset |
@@ -120,7 +157,7 @@ port or state, so nothing in practice can touch a live round.
 | Parameter | Value | Why |
 | --- | --- | --- |
 | Reset | Daily, 04:00 UK | Bounds memory, writes a tape, clean start |
-| Bots | A separate practice parameter set | The competition bots must not be reverse-engineered in advance |
+| Bots | A separate practice parameter set | Practice should not reveal the competition parameter distributions |
 | Instruments | Competition-like, a fresh seed at every reset ([`design.md`](design.md) 6.7) | Practice should transfer; exact configs should not |
 | Leaderboard | Not shown | Practice is for experiments |
 | During a live round | Paused | Frees resources on the day |
@@ -155,8 +192,10 @@ process parameters and seeds, bot code and parameters, the news
 schedule, and which counterparties are bots. These rules go in the
 participant documentation and are read out before every round.
 
-- **Anything through the protocol is fair**, including studying the book
-  and the bots to infer fair value. That is the skill being tested.
+- **Anything through the protocol is fair.** The market is built so
+  that studying it (the book, the flow, the news, the links between
+  instruments) pays, and studying the bots does not: their parameters
+  are redrawn every round ([`design.md`](design.md) 1.1).
 - **Exploiting a bug is not.** A strategy that profits from behaviour
   contrary to these documents (a validation hole, an accounting error, a
   leak) is disqualified from the round, and the round is rescored from

@@ -18,9 +18,57 @@ competition rounds and a strategy incubator.
 - A trade tape after every round, for scoring.
 - A practice exchange that is always up.
 
-**The skill being tested is price discovery.** Each instrument has a
-latent fair value that evolves over the round and is never broadcast.
-Participants infer it from the order book.
+### 1.1 What participants practise
+
+**Trading a realistic multi-instrument market in which every edge comes
+from information or modelling a real trader would have, never from
+knowing how the bots work.** Each instrument has a latent fair value
+that evolves over the round and is never broadcast. When the bots know
+the true price and behave the same way every round, studying the bots
+beats studying the market and every strategy converges on that one
+trick. So the market is built to hold several genuinely different edges
+at once:
+
+| Edge | Comes from | Wins with |
+| --- | --- | --- |
+| Market making under adverse selection | Informed bots trading on a noisy private signal of fair value; a market maker whose own view is noisy (7.2) | Inventory control, quote skew, spotting toxic flow |
+| Relative value | Instruments with an explicit link: an index whose fair value is a weighted basket of others, or a cointegrated pair (6.3) | Modelling the link, not speed |
+| News to interpret | Scheduled announcements with a consensus forecast and a noisy actual; fair value moves with the surprise, not the headline | Reading the number well; the rate limit (5.5) stops it becoming a speed race |
+| Order flow | Emerges once informed flow exists: book imbalance and trade flow become predictive, as on real exchanges | Short-horizon signals |
+
+**Signal research is done offline**, the way quants do it: past trade
+tapes are published as datasets ([`operations.md`](operations.md) 2),
+members research them, and the next live round tests the ideas on data
+nobody has seen.
+
+**Keeping it about the market, not the bots.** Bot parameters are drawn
+per round from distributions (7.4), the bots are an ecology of types
+rather than a script (7.2), and scoring values open positions at the
+true price (operations 1), so neither a bot's quirks nor an end-of-round
+trick can decide a round.
+
+Rounds run as a curriculum (operations 1.2): market making, market
+making against informed traders, relative value, news, then a mixed
+final round where every edge is live and strategies specialise.
+
+### 1.2 To specify before it is built
+
+Agreed in principle (D38), each needing its own spec change:
+
+- **The index or pair instrument** (6.3): how a basket's fair value and
+  weights are configured, and how participants learn the weights.
+  Before milestone 5, since it is price process.
+- **The news calendar:** how consensus and actual reach participants.
+  `news_event` carries only a headline, so either the numbers go in
+  headline text (no protocol change) or structured fields arrive as
+  protocol v3. Before milestone 7.
+- **The bot parameter distributions** and how the dry run covers them
+  (7.3, 7.4), with the bot runner contract. Before milestone 7.
+- **A risk or leftover-inventory penalty** in the score: wanted or not
+  (operations 1). Before milestone 8.
+- **The live leaderboard** ranks by cash P&L, which is not the score
+  (operations 1). Marking live positions to the last trade would change
+  `admin_leaderboard` (protocol v3). Before milestone 10.
 
 ## 2. Architecture
 
@@ -419,6 +467,12 @@ idiosyncratic; `rho_i` is in [-1, 1].
 | GBM with jumps | `mu, sigma, rho, jump_times, jump_sizes` | Scheduled or admin-triggered shocks, news rounds |
 | Ornstein-Uhlenbeck | `theta, mu_bar, sigma, rho` | Mean reverting. Market-making rounds and the practice exchange |
 
+**Linked instruments** (1.1, relative value) are planned but not yet
+specified (1.2): an index whose fair value is the weighted sum of its
+constituents' fair values, or a cointegrated pair. A process that
+switches unannounced between trending and mean-reverting regimes waits
+for Phase 2 (build 5).
+
 ### 6.4 Instrument configuration
 
 ```python
@@ -444,7 +498,9 @@ class InstrumentConfig:
 An asyncio task advances every fair value once a second by
 `dt = 1 / 252 / 6.5 / 3600` (one second of trading time, annualised).
 Fair values reach bots through in-process shared state. **They are never
-sent over the network, in any message, under any condition.**
+sent over the network, in any message, under any condition.** After the
+session ends, each instrument's final fair value is written to the trade
+tape for scoring (operations 1), as the seed is (6.7).
 
 ### 6.6 Staying positive
 
@@ -501,21 +557,34 @@ to an admin-only file that is never published
 
 | Type | Behaviour |
 | --- | --- |
-| Market maker | Quotes around fair value, requotes on a schedule, shrinks quotes as inventory grows |
+| Market maker | Quotes around its own **noisy** estimate of fair value, requotes on a schedule, shrinks and skews quotes as inventory grows |
+| Informed trader | Receives a noisy private signal of fair value and trades when the book disagrees with it. Quoting too tight a spread loses money to it |
 | Trend follower | Trades in the direction of fair value momentum over a lookback window |
 | Noise trader | Random limit orders near the book, randomly cancelled |
 
-Implementations and tuned parameters live in the private `oxdaq-ops`;
-the runner harness and config loading live here. The interface between
-them is agreed before either side is written.
+No bot sees the exact fair value. Every bot's noise is drawn from a child
+stream of the session seed (6.7), so a round replays exactly.
+
+Implementations and parameter distributions live in the private
+`oxdaq-ops`; the runner harness and config loading live here. The
+interface between them is agreed before either side is written.
 
 ### 7.3 Dry run
 
 Before any live round, all configured bots trade for at least 5 minutes
-with no humans. Check: a two-sided market within 30 seconds; spread in
-the expected range; no bot at its position limit within 2 minutes; trade
-volume above the configured minimum. Re-tune on any failure. **Never run
-a live round with untested bot configurations.**
+with no humans, at several parameter draws including the extremes of
+each distribution (7.4). Check: a two-sided market within 30 seconds;
+spread in the expected range; no bot at its position limit within 2
+minutes; trade volume above the configured minimum. Re-tune on any
+failure. **Never run a live round with untested bot configurations.**
+
+### 7.4 Parameters drawn per round
+
+A round config gives each bot parameter a distribution, not a value:
+noise levels, requote timing, how many informed traders there are. The
+server draws a parameter set at session start from a child stream of
+the seed, and writes the draw to the tape with the seed. A strategy has
+to work across the whole range, so tuning to one setting does not pay.
 
 ## 8. Invariants
 

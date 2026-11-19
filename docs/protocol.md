@@ -220,7 +220,8 @@ with a wrong clock.
 | `affected_instruments` | array | |
 
 The fair value jump is applied server-side and never broadcast.
-Inferring its size from the book is the skill being tested.
+Interpreting the news and inferring the jump from it and the book is
+part of what is being tested ([`design.md`](design.md) 1.1).
 
 #### `round_ended`
 | Field | Type | Description |
@@ -228,7 +229,7 @@ Inferring its size from the book is the skill being tested.
 | `round_id` | string | Matches `round_started` |
 | `final_cash` | float | |
 | `final_positions` | object | |
-| `realised_pnl` | float | `final_cash - starting_cash`. Authoritative for scoring |
+| `realised_pnl` | float | `final_cash - starting_cash`. Exact cash P&L, not the score: the score adds open positions at the final fair value, computed from the tape after the round ([`operations.md`](operations.md) 1) |
 
 When the admin ends a round, new submissions stop, every order already
 queued is processed, all open orders are cancelled, then `round_ended`
@@ -416,5 +417,7 @@ Append-only operational log.
    cash and full positions; overwrite your state from it.
 7. **Order messages are rate limited** (25 a second by default). Over the
    limit you get `rate_limited`, not a disconnection.
-8. **Scoring is realised P&L only:** `final_cash - starting_cash`. An open
-   position at the bell is worth nothing.
+8. **The score values open positions at the true fair value**, revealed
+   only after the round ([`operations.md`](operations.md) 1). Selling
+   short at the bell gains nothing; `realised_pnl` is cash P&L, not the
+   score.

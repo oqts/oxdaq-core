@@ -1,8 +1,8 @@
 # OXDAQ
 
-**OXDAQ** is the Oxford Quantitative Trading Society's live trading simulator: a real-time exchange where members write Python trading algorithms and compete in live rounds against each other and an ecosystem of market-making, trend-following and noise-trading bots.
+**OXDAQ** is the Oxford Quantitative Trading Society's live trading simulator: a real-time exchange where members write Python trading algorithms and compete in live rounds against each other and an ecosystem of market-making, informed, trend-following and noise-trading bots.
 
-This repository is the **open-source core**: the matching engine, the wire protocol, the `oqts-client` library participants build against, and the dashboards. Bot parameters and round configurations live in a private repository, because the bots are meant to be reverse-engineered during a round, not before it.
+This repository is the **open-source core**: the matching engine, the wire protocol, the `oqts-client` library participants build against, and the dashboards. Bot parameters and round configurations live in a private repository, and bot parameters are redrawn every round, so strategies win by reading the market rather than the bots.
 
 > **Status: in build.** The wire protocol is done (version 2). The Python reference matching engine is next, against a ready test suite. See [build status](#build-status).
 
@@ -10,7 +10,7 @@ This repository is the **open-source core**: the matching engine, the wire proto
 
 A central exchange server with WebSocket clients. All matching, accounting and state live on the server; clients send orders and receive market data.
 
-The skill being tested is **price discovery**. Every instrument has a hidden fair value that moves during the round and is never broadcast. Participants infer it from the order book.
+Every instrument has a hidden fair value that moves during the round and is never broadcast. The market is built so that **every edge comes from information or modelling a real trader would have, never from knowing how the bots work**: market making against informed traders, relative value between linked instruments, and interpreting news. Bot parameters are redrawn every round, open positions are scored at the true price revealed afterwards, and past rounds' trade tapes are published for offline signal research.
 
 - **One queue, one consumer.** Every order goes through a single queue processed by one consumer, so the engine needs no locks and time priority is simply arrival order.
 - **Integers inside.** Prices are integer ticks and cash is an integer count of 1/10000 of a unit, so scores are exact and reproducible from the trade tape.
@@ -108,7 +108,7 @@ Alongside milestones 3 to 12, the C++ engine:
 
 ## Scope
 
-Rounds score **realised P&L only**: `final_cash - starting_cash`. Phase 2 ideas, from mark-to-market P&L to a fully C++ exchange, are listed in [`docs/build.md`](docs/build.md).
+Rounds score cash P&L plus open positions valued at the true fair value, revealed after the round ([`docs/operations.md`](docs/operations.md) 1). Phase 2 ideas, from live mark-to-market P&L and a regime-switching price process to a fully C++ exchange, are listed in [`docs/build.md`](docs/build.md).
 
 ## Contributing
 

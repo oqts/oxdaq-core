@@ -323,8 +323,9 @@ class NewsEvent(_Message):
 
     Information asymmetry is the point. The fair value jump is applied
     server-side and never broadcast: participants get the headline and the
-    affected instruments, and inferring the magnitude from book dynamics
-    is the skill being tested. There is deliberately no magnitude field.
+    affected instruments, and interpreting the news and the book to infer
+    the magnitude is part of the game (design.md 1.1). There is
+    deliberately no magnitude field.
     """
 
     type: Literal["news_event"] = "news_event"
@@ -339,7 +340,7 @@ class RoundEnded(_Message):
     final_cash: float
     final_positions: dict[str, int]
     realised_pnl: float = Field(
-        description="final_cash - starting_cash. Authoritative for scoring"
+        description="final_cash - starting_cash. Cash P&L, not the score (operations 1)"
     )
 
 
