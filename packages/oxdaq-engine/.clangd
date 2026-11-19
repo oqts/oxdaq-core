@@ -1,0 +1,3 @@
+# clangd (editor completion and errors) reads the dev preset's compile database.
+CompileFlags:
+  CompilationDatabase: build/dev

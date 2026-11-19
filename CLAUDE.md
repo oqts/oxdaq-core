@@ -18,7 +18,8 @@ packages/oqts-client/src/oqts/   published to PyPI as oqts-client, imported as `
     protocol/                    enums, messages, codec   <- SHARED, frozen
 packages/oxdaq/src/oxdaq/        the server, never published
     units.py                     TICK_SCALE, to_wire/from_wire <- SERVER ONLY
-packages/oxdaq-engine/           C++ engine + nanobind module (arrives with E1)
+packages/oxdaq-engine/           C++ engine (cpp/, Alec's) + CMake, presets; nanobind module in R8
+    tests/cpp/                   GoogleTest, picked up with no CMake edit
 tests/protocol/                  suites, samples.py
 tests/golden/                    one frozen JSON frame per message type
 tests/engine/                    the shared engine suite (design 4.5), both engines
@@ -50,12 +51,13 @@ Ruff does not touch Markdown (it would reformat code blocks in docs).
 ## Commands
 
 ```bash
-uv sync
+uv sync                  # also builds packages/oxdaq-engine via scikit-build-core
 uv run pytest            # uv run pytest -k book for one area
 uv run pytest tests/engine -q                  # where the engine stands
 uv run python -m tests.engine.replay F.jsonl --shrink   # minimise a failing stream
 uv run ruff check .
 uv run ruff format .
+cd packages/oxdaq-engine && cmake --workflow --preset dev   # also asan, release
 ```
 
 Never `pip install` into the venv; never hand-edit `uv.lock`. A new

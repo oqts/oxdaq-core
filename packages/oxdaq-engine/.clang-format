@@ -1,0 +1,5 @@
+# C++ formatting for the engine. Check: clang-format --dry-run --Werror <files>
+BasedOnStyle: Google
+ColumnLimit: 100
+DerivePointerAlignment: false
+PointerAlignment: Left

@@ -1,0 +1,20 @@
+# Static checks for the engine sources (cpp/). Run against the dev build's
+# compile_commands.json:  clang-tidy -p build/dev cpp/src/*.cpp
+# Not run on tests/cpp/: GoogleTest's macros trip most of these by design.
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  clang-analyzer-*,
+  cppcoreguidelines-*,
+  -cppcoreguidelines-avoid-magic-numbers,
+  misc-*,
+  -misc-include-cleaner,
+  -misc-non-private-member-variables-in-classes,
+  modernize-*,
+  -modernize-use-trailing-return-type,
+  performance-*,
+  readability-*,
+  -readability-identifier-length,
+  -readability-magic-numbers
+HeaderFilterRegex: '.*/cpp/include/oxdaq/.*'

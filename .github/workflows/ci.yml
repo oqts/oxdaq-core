@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  check:
+  python:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,7 +18,8 @@ jobs:
 
       # Python is pinned to 3.13 in .python-version, and production
       # containers run python:3.13-slim, so CI, local and server match
-      # exactly (docs/build.md 2.1).
+      # exactly (docs/build.md 2.1). This also builds packages/oxdaq-engine
+      # through scikit-build-core.
       - name: Sync the locked environment
         run: uv sync --locked
 
@@ -40,3 +41,58 @@ jobs:
       - name: Engine suite (required from milestone 2)
         continue-on-error: true
         run: uv run pytest tests/engine
+
+  engine:
+    # docs/build.md 2.2: Apple clang, GCC 14 and clang 18; dev and asan.
+    name: engine (${{ matrix.config.name }}, ${{ matrix.preset }})
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [dev, asan]
+        config:
+          - { name: apple-clang, os: macos-latest, cc: clang, cxx: clang++ }
+          - { name: gcc-14, os: ubuntu-24.04, cc: gcc-14, cxx: g++-14 }
+          - { name: clang-18, os: ubuntu-24.04, cc: clang-18, cxx: clang++-18 }
+    env:
+      CC: ${{ matrix.config.cc }}
+      CXX: ${{ matrix.config.cxx }}
+    defaults:
+      run:
+        working-directory: packages/oxdaq-engine
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: |
+          if [ "$RUNNER_OS" = macOS ]; then brew install ninja
+          else sudo apt-get update && sudo apt-get install -y ninja-build; fi
+
+      - name: Configure, build, test
+        run: cmake --workflow --preset ${{ matrix.preset }}
+
+  engine-lint:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: packages/oxdaq-engine
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y ninja-build clang-format-18 clang-tidy-18
+
+      - name: clang-format
+        run: |
+          files=$(find cpp tests/cpp -name '*.hpp' -o -name '*.cpp')
+          [ -z "$files" ] || clang-format-18 --dry-run --Werror $files
+
+      - name: clang-tidy
+        env:
+          CC: clang-18
+          CXX: clang++-18
+        run: |
+          files=$(find cpp/src -name '*.cpp')
+          if [ -z "$files" ]; then echo "no engine sources yet"; exit 0; fi
+          cmake --preset dev
+          clang-tidy-18 -p build/dev --warnings-as-errors='*' $files
