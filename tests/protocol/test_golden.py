@@ -61,7 +61,7 @@ def test_protocol_version_is_pinned() -> None:
     this catches: a version that moves without the shape moving tells
     clients to expect a change that did not happen.
     """
-    assert PROTOCOL_VERSION == 1
+    assert PROTOCOL_VERSION == 2
 
 
 def test_the_message_type_inventory_is_pinned() -> None:
@@ -83,6 +83,7 @@ def test_the_message_type_inventory_is_pinned() -> None:
         "fill",
         # server to all, protocol.md 7, protocol.md 8
         "book_update",
+        "trade_tick",
         "round_started",
         "news_event",
         "round_ended",

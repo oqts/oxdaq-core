@@ -2,7 +2,7 @@
   "timestamp": 1714300000.123,
   "seq": 0,
   "type": "auth_ok",
-  "protocol_version": 1,
+  "protocol_version": 2,
   "connection_id": "conn_9f2a",
   "team_id": "team_07",
   "display_name": "Merton Micro",

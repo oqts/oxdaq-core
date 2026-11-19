@@ -43,6 +43,7 @@ from .messages import (
     RoundStarted,
     StateSnapshot,
     SubmitOrder,
+    TradeTick,
 )
 
 __all__ = [
@@ -82,6 +83,7 @@ ServerMessage = (
     | CancelRejected
     | Fill
     | BookUpdate
+    | TradeTick
     | RoundStarted
     | NewsEvent
     | RoundEnded

@@ -291,3 +291,66 @@ def test_nulls_are_kept_rather_than_omitted() -> None:
     )
     assert "last_trade_price" in frame
     assert frame["last_trade_price"] is None
+
+
+# --- protocol v2. D28 to D32 ------------------------------------------------
+
+
+@pytest.mark.parametrize("order_type", ["limit", "ioc"])
+def test_both_order_types_decode(order_type: str) -> None:
+    frame = json.loads(encode(SAMPLES["submit_order"]))
+    frame["order_type"] = order_type
+    assert decode_client_message(json.dumps(frame)).order_type == order_type
+
+
+def test_order_type_is_required() -> None:
+    """No default on the wire: a v1 client that omits it fails loudly rather
+    than having the server guess what it meant (protocol.md 3)."""
+    frame = json.loads(encode(SAMPLES["submit_order"]))
+    del frame["order_type"]
+    with pytest.raises(DecodeError) as exc:
+        decode_client_message(json.dumps(frame))
+    assert exc.value.code is ErrorCode.SCHEMA_VIOLATION
+
+
+@pytest.mark.parametrize("order_type", ["market", "fok", "LIMIT", ""])
+def test_an_unknown_order_type_is_a_schema_violation(order_type: str) -> None:
+    frame = json.loads(encode(SAMPLES["submit_order"]))
+    frame["order_type"] = order_type
+    with pytest.raises(DecodeError) as exc:
+        decode_client_message(json.dumps(frame))
+    assert exc.value.code is ErrorCode.SCHEMA_VIOLATION
+
+
+def test_trade_tick_is_anonymous() -> None:
+    """Invariant 8 and protocol.md 7: nothing in a public trade can identify
+    either side, so it cannot single out a bot."""
+    assert set(m.TradeTick.model_fields) == {
+        "timestamp",
+        "seq",
+        "type",
+        "instrument_id",
+        "price",
+        "volume",
+        "aggressor_side",
+    }
+
+
+def test_rate_limited_is_a_reason_for_orders_and_cancels() -> None:
+    """D30: submits and cancels share one budget, and both are refused with
+    a reason rather than an error or a disconnection."""
+    for cls in (m.OrderRejected, m.CancelRejected):
+        frame = json.loads(encode(SAMPLES[cls.model_fields["type"].default]))
+        frame["reason"] = "rate_limited"
+        assert decode_server_message(json.dumps(frame)).reason == "rate_limited"
+
+
+def test_admin_start_round_has_no_seed() -> None:
+    """design.md 6.7, D32: the server generates the seed. A frame that tries
+    to supply one is refused, not silently ignored."""
+    assert "seed" not in m.AdminStartRound.model_fields
+    frame = json.loads(encode(SAMPLES["admin_start_round"]))
+    frame["seed"] = 20260828
+    with pytest.raises(DecodeError) as exc:
+        decode_client_message(json.dumps(frame))
+    assert exc.value.code is ErrorCode.SCHEMA_VIOLATION

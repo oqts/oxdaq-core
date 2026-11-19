@@ -23,6 +23,5 @@
   ],
   "starting_cash": 100000.0,
   "position_limit": 100,
-  "duration_s": 1200.0,
-  "seed": 20260828
+  "duration_s": 1200.0
 }

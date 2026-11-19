@@ -18,6 +18,7 @@ __all__ = [
     "CancelRejectReason",
     "CloseCode",
     "ErrorCode",
+    "OrderType",
     "PracticeAction",
     "RejectReason",
     "Role",
@@ -44,6 +45,18 @@ class Side(StrEnum):
         decrease it (design.md 5.6).
         """
         return 1 if self is Side.BID else -1
+
+
+class OrderType(StrEnum):
+    """protocol.md 3, design.md 4.1. Added in protocol v2 (D28).
+
+    A limit order's unmatched remainder rests. An IOC (immediate or
+    cancel) matches identically, then its remainder is cancelled at once
+    and never enters the book.
+    """
+
+    LIMIT = "limit"
+    IOC = "ioc"
 
 
 class SessionState(StrEnum):
@@ -85,6 +98,7 @@ class RejectReason(StrEnum):
     UNKNOWN_INSTRUMENT = "unknown_instrument"
     INVALID_VOLUME = "invalid_volume"
     INVALID_PRICE = "invalid_price"
+    RATE_LIMITED = "rate_limited"  # v2, D30. The connection stays open
 
 
 class CancelRejectReason(StrEnum):
@@ -93,6 +107,7 @@ class CancelRejectReason(StrEnum):
     UNKNOWN_ORDER = "unknown_order"
     NOT_YOUR_ORDER = "not_your_order"
     ROUND_NOT_ACTIVE = "round_not_active"
+    RATE_LIMITED = "rate_limited"  # v2, D30. Cancels share the order budget
 
 
 class ErrorCode(StrEnum):

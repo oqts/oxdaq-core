@@ -28,6 +28,7 @@ from .enums import (
     AdminSeverity,
     CancelRejectReason,
     ErrorCode,
+    OrderType,
     PracticeAction,
     RejectReason,
     Role,
@@ -35,7 +36,7 @@ from .enums import (
     Side,
 )
 
-PROTOCOL_VERSION: Final[int] = 1
+PROTOCOL_VERSION: Final[int] = 2
 """Sent in ``auth_ok``. A client whose version differs must fail loudly at
 startup rather than degrade silently (protocol.md 2)."""
 
@@ -147,6 +148,9 @@ class SubmitOrder(_Message):
     client_order_id: ClientOrderId
     instrument_id: InstrumentId
     side: Side
+    order_type: OrderType = Field(
+        description="limit or ioc. An IOC remainder never rests (design.md 4.1)"
+    )
     price: Price = Field(description="Limit price. Rounded to the tick on receipt")
     volume: Volume
 
@@ -199,6 +203,8 @@ class OrderRejected(_Message):
 
 
 class CancelAck(_Message):
+    """protocol.md 4. Also sent unprompted for an IOC remainder, after its fills."""
+
     type: Literal["cancel_ack"] = "cancel_ack"
     order_id: OrderId
     instrument_id: InstrumentId
@@ -246,9 +252,9 @@ class Fill(_Message):
     """Sent only to the two counterparties of a trade. protocol.md 6.
 
     Carries authoritative `cash` and the **full** position map. The client
-    overwrites its cache from these before calling `on_fill`, so client
-    state self-corrects on every fill and cannot permanently diverge, even
-    if a participant's algorithm mishandles an event (design.md 5.7).
+    overwrites its cache from these, so client state self-corrects on every
+    fill and cannot permanently diverge, even if a participant's algorithm
+    mishandles an event (design.md 5.7).
     """
 
     type: Literal["fill"] = "fill"
@@ -275,6 +281,21 @@ class BookUpdate(_Message):
     bids: list[BookLevel]
     asks: list[BookLevel]
     last_trade_price: float | None = None
+
+
+class TradeTick(_Message):
+    """One match, broadcast to every connection. protocol.md 7, D31.
+
+    Anonymous: no order, team or connection id, so it cannot identify a
+    bot (invariant 8). Never coalesced or dropped (invariant 13), so the
+    public tape is complete.
+    """
+
+    type: Literal["trade_tick"] = "trade_tick"
+    instrument_id: InstrumentId
+    price: Price = Field(description="Execution price: the resting order's")
+    volume: Volume = Field(description="Traded in this match")
+    aggressor_side: Side = Field(description="The incoming order's side")
 
 
 # ---------------------------------------------------------------------------
@@ -414,7 +435,9 @@ class AdminStartRound(_AdminCommand):
     starting_cash: float = Field(gt=0.0)
     position_limit: int = Field(gt=0)
     duration_s: float = Field(gt=0.0)
-    seed: int = Field(description="Recorded in instruments.json, so a round replays")
+    # No seed: the server generates one from a secure source (design.md 6.7,
+    # D32). An admin-supplied seed would let whoever chose it replay the
+    # round's fair values.
 
 
 class AdminEndRound(_AdminCommand):
@@ -454,9 +477,9 @@ class AdminCancelTeamOrders(_AdminCommand):
 class AdminDisconnect(_AdminCommand):
     """Closes one connection with code 4009. protocol.md 10.
 
-    Under protocol v1 the connection's resting orders survive; from v2 the
-    disconnect sweep cancels them (protocol.md 2). Either way the team's
-    other connections keep theirs: `admin_cancel_team_orders` clears all.
+    Closing the connection sweeps its resting orders through the queue
+    (protocol.md 2, D29). The team's other connections keep theirs:
+    `admin_cancel_team_orders` clears all.
     """
 
     type: Literal["admin_disconnect"] = "admin_disconnect"
@@ -511,8 +534,9 @@ class AdminSnapshot(_Message):
     """The admin equivalent of `state_snapshot`. protocol.md 10.
 
     `instruments` is `InstrumentPublic`, not `InstrumentConfigWire`: the
-    process parameters and the seed the admin sent in are deliberately not
-    echoed back to a browser.
+    process parameters the admin sent in are deliberately not echoed back
+    to a browser, and the server-generated seed never leaves the server
+    during a session (design.md 6.7).
     """
 
     type: Literal["admin_snapshot"] = "admin_snapshot"
