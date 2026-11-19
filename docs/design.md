@@ -215,9 +215,44 @@ to everyone ([`protocol.md`](protocol.md) 6, 7).
 ### 4.5 Two implementations
 
 The engine is the one component written twice, behind one interface (a
-`typing.Protocol` in Python): submit an order and get its fills; cancel
-by id and get the remainder or a failure; snapshot a book. Both take and
-return integers only. Sections 4.1 to 4.4 bind both identically.
+`typing.Protocol` in Python). Both take and return integers only.
+Sections 4.1 to 4.4 bind both identically.
+
+```python
+# oxdaq.engine, and the same names in the C++ module oxdaq_engine
+class Side(IntEnum):      BID = 0; ASK = 1
+class OrderType(IntEnum): LIMIT = 0; IOC = 1
+Order                     # the fields of 4.2
+Fill                      # maker_order_id, taker_order_id, instrument_id,
+                          # price_ticks, volume
+Resting                   # order_id, team_id, price_ticks, remaining_volume, seq
+Book                      # bids, asks: list[Resting], each best first
+
+class Engine(Protocol):
+    def process(self, order: Order) -> list[Fill]: ...
+    def cancel(self, order_id: int) -> int | None: ...
+    def snapshot(self, instrument_id: int) -> Book: ...
+
+ReferenceEngine()         # the Python engine: no arguments
+```
+
+- **One engine holds every instrument's book.** `cancel` takes only an
+  id, so the engine keeps an id index. A book exists from its first
+  order; the snapshot of an instrument never seen is empty.
+- **`process`** returns the fills in match order. An IOC's cancelled
+  remainder is not returned: it is `order.volume` minus the filled
+  volume, which the session manager computes for its `cancel_ack`.
+- **`cancel`** returns the remaining volume it removed, or `None` if the
+  id is not resting (never seen, filled, cancelled, or an IOC). `None` is
+  not an error.
+- **`snapshot`** lists every resting order in priority order, so two
+  engines with equal snapshots have equal queues, not just equal levels.
+  `book_update` aggregates levels outside the engine. A snapshot is a
+  value: later activity does not change it.
+- **Bad input raises `ValueError`**: an `order_id` already resting, or
+  `price_ticks` or `volume` below 1. The book is unchanged. Validation
+  (5.5) means this never happens in a session; the check catches a
+  session manager bug before it corrupts a book.
 
 - **Reference engine** (Python, 4.2). Built first; the rest of the
   system is built and run on it. Kept permanently as the test oracle and

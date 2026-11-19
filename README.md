@@ -4,7 +4,7 @@
 
 This repository is the **open-source core**: the matching engine, the wire protocol, the `oqts-client` library participants build against, and the dashboards. Bot parameters and round configurations live in a private repository, because the bots are meant to be reverse-engineered during a round, not before it.
 
-> **Status: in build.** The wire protocol is done (version 2). The Python reference matching engine is next. See [build status](#build-status).
+> **Status: in build.** The wire protocol is done (version 2). The Python reference matching engine is next, against a ready test suite. See [build status](#build-status).
 
 ## How it works
 
@@ -66,6 +66,14 @@ uv run ruff format .     # format
 ```
 
 Python is pinned to 3.13. The C++ engine, once it lands in `packages/oxdaq-engine`, builds with CMake presets and is packaged into the workspace by scikit-build-core ([`docs/build.md`](docs/build.md)).
+
+**Where the matching engine stands:**
+
+```bash
+uv run pytest tests/engine -q
+```
+
+This is the shared correctness suite, run against each engine ([`docs/design.md`](docs/design.md) 4.5). Until the reference engine exists it reports one failure naming what to write. A failing random stream is saved to `.oxdaq/failures/`; `uv run python -m tests.engine.replay <file> --shrink` cuts it down to the fewest orders that still fail.
 
 **The wire protocol is frozen.** `tests/golden/` pins every message byte for byte. A failure there means the wire shape changed, which requires a `PROTOCOL_VERSION` bump and a matching change to `docs/protocol.md`.
 

@@ -21,6 +21,10 @@ packages/oxdaq/src/oxdaq/        the server, never published
 packages/oxdaq-engine/           C++ engine + nanobind module (arrives with E1)
 tests/protocol/                  suites, samples.py
 tests/golden/                    one frozen JSON frame per message type
+tests/engine/                    the shared engine suite (design 4.5), both engines
+    driver.py                    drives any engine through plain ints and tuples
+    streams.py                   op streams, per-step spec checks, the differential
+    replay.py                    replay or shrink a failing stream
 docs/                            the spec
 ```
 
@@ -48,13 +52,20 @@ Ruff does not touch Markdown (it would reformat code blocks in docs).
 ```bash
 uv sync
 uv run pytest            # uv run pytest -k book for one area
+uv run pytest tests/engine -q                  # where the engine stands
+uv run python -m tests.engine.replay F.jsonl --shrink   # minimise a failing stream
 uv run ruff check .
 uv run ruff format .
 ```
 
 Never `pip install` into the venv; never hand-edit `uv.lock`. A new
-dependency is a design decision: propose it first. C++ commands: build
+dependency is a design decision: propose it first. C++ toolchain: build
 2.2.
+
+The engine suite fails with one line (`test_engine_exists.py`) and skips
+the rest until `oxdaq.engine` exports the design 4.5 names; the cpp runs
+skip until R8. CI keeps `tests/engine` non-blocking until milestone 2 is
+done: remove its `continue-on-error` then.
 
 ## Ownership
 
@@ -119,3 +130,38 @@ previous one is done. Never run a live round with untuned bots (design
   before either side is written.
 - A dashboard subsection of `brand.md` is planned; until then follow
   `brand.md` as written.
+
+## A build session
+
+The build half of the `cpp-oxdaq` learning goal, run like a learning
+session (`~/files/Learning/CLAUDE.md`, "A session"). Alec opens this repo
+and says "session". Then:
+
+1. **Find the block.** kairos `list_events` for today, Projects key: the
+   block now or next titled `☐ Build: ...`. Its task (`list_tasks`, same
+   title) has notes starting "Learning goal cpp-oxdaq ..., topic N" saying
+   why it is there. A concept topic (no `Build:`) belongs in
+   `~/files/Learning`: say so. If no block is running, offer the next.
+2. **Five minutes of recall first:** two or three quick questions on the
+   last session, read from `~/files/Learning/cpp-oxdaq/log.md`.
+3. **State the target:** which tests must go green, from the table below
+   (ROUNDS.md "Done when", build 4), and run them once so he sees where
+   he starts.
+4. **He writes, Claude reviews.** Never write or sketch his code
+   (Ownership), even when he is stuck. Point at the failing test and what
+   it asserts, the spec section and the exact docs; ask the question that
+   leads to the bug. Review what he writes against design 8 and the spec.
+   Explain only what he cannot get to, briefly; anything longer goes to
+   the tablet as LaTeX (`to_remarkable`).
+5. **Close.** Run the target and say what is green. Append three lines to
+   `~/files/Learning/cpp-oxdaq/log.md`: the date, the block, what was hard
+   (the next recall comes from it). Tell him to check the block in the
+   calendar ("done", or "partly, N min left"). When a round or milestone
+   completes, update `state.md` and the README build status.
+
+| Build task (kairos) | Target | Command |
+| --- | --- | --- |
+| Order and OrderBook ... resting and price-time matching (R1) | `test_engine_exists`, `TestResting`, `TestMatching`. Every test reads books through `snapshot`, so it comes first | `uv run pytest tests/engine -k "exists or Resting or Matching"` |
+| IOC, cancel and snapshot ... until the shared suite passes (R1) | All of `tests/engine` on `py`. R1 is done when it passes **and** he can explain the bid key and time priority | `uv run pytest tests/engine -q` |
+| Ticks, Volume, Side and reject codes (R2) | GoogleTest green under `dev` and `asan`, no `-Wconversion` warnings. The tests are written once he has fixed the types' signatures | `cd packages/oxdaq-engine && cmake --workflow --preset dev && cmake --workflow --preset asan` |
+| Later rounds | ROUNDS.md "Done when" and build 4 | |
