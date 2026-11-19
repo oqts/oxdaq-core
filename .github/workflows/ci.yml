@@ -84,7 +84,7 @@ jobs:
 
       - name: clang-format
         run: |
-          files=$(find cpp tests/cpp -name '*.hpp' -o -name '*.cpp')
+          files=$(find cpp tests/cpp \( -name '*.hpp' -o -name '*.cpp' \) 2>/dev/null || true)
           [ -z "$files" ] || clang-format-18 --dry-run --Werror $files
 
       - name: clang-tidy
@@ -92,7 +92,7 @@ jobs:
           CC: clang-18
           CXX: clang++-18
         run: |
-          files=$(find cpp/src -name '*.cpp')
+          files=$(find cpp/src -name '*.cpp' 2>/dev/null || true)
           if [ -z "$files" ]; then echo "no engine sources yet"; exit 0; fi
           cmake --preset dev
           clang-tidy-18 -p build/dev --warnings-as-errors='*' $files
