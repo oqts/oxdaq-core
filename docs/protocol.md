@@ -220,7 +220,8 @@ with a wrong clock.
 | `affected_instruments` | array | |
 
 The fair value jump is applied server-side and never broadcast.
-Inferring its size from the book is the skill being tested.
+Interpreting the news and inferring the jump from it and the book is
+part of what is being tested ([`design.md`](design.md) 1.1).
 
 #### `round_ended`
 | Field | Type | Description |
@@ -228,7 +229,7 @@ Inferring its size from the book is the skill being tested.
 | `round_id` | string | Matches `round_started` |
 | `final_cash` | float | |
 | `final_positions` | object | |
-| `realised_pnl` | float | `final_cash - starting_cash`. Authoritative for scoring |
+| `realised_pnl` | float | `final_cash - starting_cash`. Exact cash P&L, not the score: the score adds open positions at the final fair value, computed from the tape after the round ([`operations.md`](operations.md) 1) |
 
 When the admin ends a round, new submissions stop, every order already
 queued is processed, all open orders are cancelled, then `round_ended`

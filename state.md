@@ -11,6 +11,7 @@
 - 2026-11-19: only the matching engine moves to C++, in process via nanobind; the Python reference engine stays as oracle and fallback (D19 to D24).
 - 2026-11-19: integer arrival sequence and integer engine ids (D25, D26); synchronous `Exchange` client and protocol v2 (D27 to D32).
 - 2026-11-19: engine interface pinned in design 4.5 (D34); snapshots list resting orders (D35); bad engine input raises `ValueError` (D36).
+- 2026-11-19: target skill (D38): a realistic multi-instrument market where edges come from information and modelling (market making under adverse selection, relative value, news), signal research offline on published tapes; positions scored at final fair value (D39); no bot sees exact fair value, parameters drawn per round (D40). No engine or protocol change.
 - Engine (Python and C++, bindings included), accounting, price maths and all async are Alec's to write by hand.
 
 ## Next
@@ -21,6 +22,7 @@
 
 ## Open
 - Dashboard stack, before milestone 9 (`docs/build.md` 2.3).
-- Bot runner contract with `oxdaq-ops`, before milestone 7.
+- Bot runner contract with `oxdaq-ops`, and the bot parameter distributions, before milestone 7.
+- From D38 (design 1.2): linked instruments before milestone 5; news calendar format (headline text or protocol v3) before 7; risk penalty before 8; live leaderboard marking before 10.
 - Practice exchange parameters, before milestone 11.
 - An unmerged `alec/milestone-1-protocol` branch on compute-node, probably superseded.

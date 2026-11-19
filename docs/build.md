@@ -8,11 +8,12 @@ build order, and what waits for Phase 2.
 | Repo | Visibility | Holds |
 | --- | --- | --- |
 | `oxdaq-core` | public | Engine (Python and C++), session manager, gateway, price process, protocol, `oqts-client`, bot runner, dashboards, this spec |
-| `oxdaq-ops` | private | Bot implementations and tuned parameters, round and instrument configs, news schedules, admin tooling |
+| `oxdaq-ops` | private | Bot implementations and parameter distributions, round and instrument configs, news schedules, admin tooling |
 | `oqts-infra` | private | The society server: Caddy, compose files, deploy |
 
 Open engine, closed configuration: participants may read how the
-exchange works, but must reverse-engineer the bots during a round.
+exchange works, but not the bots, their parameter distributions or the
+news schedule, so the edge comes from the market ([`design.md`](design.md) 1.1).
 
 `oxdaq-core` is a uv workspace:
 
@@ -113,10 +114,10 @@ repo; this is the order those rounds respect.
 | 2 | Reference matching engine (Python) | Shared suite passes: partial and full fills, price-time priority, price improvement, IOC, multiple instruments, every rejection path |
 | 3 | Session manager and accounting | Suite covers buying power, both position bounds, the fill-invariance property, short selling, cancel release, round-end drain |
 | 4 | WebSocket gateway | Two processes authenticate, trade and receive fills and ticks; `resync` correct after a forced disconnect, and the disconnected connection's orders are gone; rate limit enforced; `book_update` coalesced under load |
-| 5 | Price process | All three processes valid; market-factor correlation verified statistically |
+| 5 | Price process | All three processes valid; market-factor correlation verified statistically; linked instruments once specified ([`design.md`](design.md) 1.2) |
 | 6 | `oqts-client` | `Exchange` and `oqts.aio` connect, trade, keep correct state and recover from a forced disconnect, as a script and in a notebook |
-| 7 | Bots | All three types pass the dry run together |
-| 8 | Trade tape | Bundle written and validated; P&L recomputed from `trades.csv` matches `participants.csv` exactly |
+| 7 | Bots | All four types, informed trader included, pass the dry run together across the parameter distributions; parameters drawn per round from the seed |
+| 8 | Trade tape | Bundle written and validated; cash P&L recomputed from `trades.csv` and the score from it plus `final_fair_value` both match `participants.csv` exactly |
 | 9 | Student dashboard | P&L, positions, cash, timer and news correct in a test session |
 | 10 | Admin dashboard | Live leaderboard; start, end and news injection work |
 | 11 | Practice exchange | 72 hours unattended; daily reset fires, tape written, memory flat |
@@ -139,7 +140,8 @@ Not built until Phase 2 is scoped.
 | Item | Why it waits |
 | --- | --- |
 | A full C++ exchange | The order loop, then the gateway, in C++ around the engine core, with threads, a lock-free single-producer single-consumer queue and a socket or shared-memory boundary. Phase 1 keeps C++ to the engine, where nothing is threaded |
-| Mark-to-market P&L | Needs a stable mid; `(best_bid + best_ask) / 2` with a minimum liquidity rule |
+| Live mark-to-market P&L | Needs a stable mid; `(best_bid + best_ask) / 2` with a minimum liquidity rule. The final score already values positions at fair value ([`operations.md`](operations.md) 1) |
+| Regime-switching price process | Unannounced switches between trending and mean-reverting, for in-round signal research. The Phase 1 edges come first ([`design.md`](design.md) 1.1) |
 | Real margin model | Margin calls and liquidation are a long tail; Phase 1 documents its leverage instead ([`design.md`](design.md) 5.4) |
 | Amending orders | Volume amend keeping priority on a reduction. Cancel and replace covers Phase 1 |
 | Local sandbox | `Exchange(local=True)`: the reference engine and bots in process, offline |

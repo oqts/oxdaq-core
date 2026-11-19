@@ -70,9 +70,10 @@ while ex.round_active():
 - **An IOC that does not fully fill** reports its unfilled volume as
   `r.cancelled_volume` once matching completes.
 - **`get_pnl()` is indicative:** the change in cash plus open positions
-  at each instrument's last trade price. The competition scores realised
-  P&L only ([`operations.md`](operations.md) 1), which is `get_cash()`
-  minus starting cash.
+  at each instrument's last trade price. The competition values open
+  positions at the true fair value, revealed only after the round
+  ([`operations.md`](operations.md) 1), so `get_pnl()` is your best live
+  estimate of the score, not the score.
 - **`wait_for_update` is the recommended pause.** It returns as soon as a
   book, fill, trade or news item arrives. A loop that never pauses meets
   the rate limit.

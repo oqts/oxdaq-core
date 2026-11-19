@@ -130,6 +130,9 @@ previous one is done. Never run a live round with untuned bots (design
   before milestone 11.
 - The bot runner interface with `oxdaq-ops` is not designed; agree it
   before either side is written.
+- D38 left items to specify before they are built (design 1.2): linked
+  instruments, news calendar format, bot parameter distributions, a risk
+  penalty, live leaderboard marking.
 - A dashboard subsection of `brand.md` is planned; until then follow
   `brand.md` as written.
 
