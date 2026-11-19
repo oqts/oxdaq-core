@@ -1,6 +1,6 @@
-"""One canonical instance of every wire message. Spec 9.
+"""One canonical instance of every wire message. docs/protocol.md.
 
-This is the freeze mechanism (spec 15.2, D17). ``test_golden.py`` encodes
+This is the freeze mechanism (build.md 2.1, D17). ``test_golden.py`` encodes
 each of these and compares byte for byte against ``tests/golden/``, and
 asserts that every type in ``ALL_MESSAGE_TYPES`` appears here. So a field
 cannot be added, removed, renamed or retyped, and a message type cannot be
@@ -52,7 +52,7 @@ _CONNECTION_ROW = m.ConnectionRow(
 )
 
 SAMPLES: dict[str, m._Message] = {
-    # --- client to server, spec 9.3 ---
+    # --- client to server, protocol.md 3 ---
     "auth": m.Auth(timestamp=_T, seq=0, token="tok_abc123"),
     "submit_order": m.SubmitOrder(
         timestamp=_T,
@@ -65,7 +65,7 @@ SAMPLES: dict[str, m._Message] = {
     ),
     "cancel_order": m.CancelOrder(timestamp=_T, seq=2, order_id="o-0001"),
     "resync": m.Resync(timestamp=_T, seq=3),
-    # --- server to client, acks, spec 9.4 ---
+    # --- server to client, acks, protocol.md 4 ---
     "auth_ok": m.AuthOk(
         timestamp=_T,
         seq=0,
@@ -103,7 +103,7 @@ SAMPLES: dict[str, m._Message] = {
     "cancel_rejected": m.CancelRejected(
         timestamp=_T, seq=4, order_id="o-0009", reason="unknown_order"
     ),
-    # --- server to client, state, spec 9.5 ---
+    # --- server to client, state, protocol.md 5 ---
     "state_snapshot": m.StateSnapshot(
         timestamp=_T,
         seq=5,
@@ -127,7 +127,7 @@ SAMPLES: dict[str, m._Message] = {
         ],
         books={"STOCK_A": _BOOK},
     ),
-    # --- server to client, fills, spec 9.6 ---
+    # --- server to client, fills, protocol.md 6 ---
     "fill": m.Fill(
         timestamp=_T,
         seq=6,
@@ -142,7 +142,7 @@ SAMPLES: dict[str, m._Message] = {
         cash=100836.5678,
         positions={"STOCK_A": 16},
     ),
-    # --- server to all, market data, spec 9.7 ---
+    # --- server to all, market data, protocol.md 7 ---
     "book_update": m.BookUpdate(
         timestamp=_T,
         seq=7,
@@ -151,7 +151,7 @@ SAMPLES: dict[str, m._Message] = {
         asks=list(_BOOK.asks),
         last_trade_price=99.51,
     ),
-    # --- server to all, lifecycle, spec 9.8 ---
+    # --- server to all, lifecycle, protocol.md 8 ---
     "round_started": m.RoundStarted(
         timestamp=_T,
         seq=8,
@@ -178,7 +178,7 @@ SAMPLES: dict[str, m._Message] = {
         final_positions={"STOCK_A": 0},
         realised_pnl=1234.5678,
     ),
-    # --- server to client, protocol errors, spec 9.9 ---
+    # --- server to client, protocol errors, protocol.md 9 ---
     "error": m.Error(
         timestamp=_T,
         seq=11,
@@ -187,7 +187,7 @@ SAMPLES: dict[str, m._Message] = {
         detail={"errors": [{"field": "volume", "problem": "Input should be > 0"}]},
         client_order_id="c-0003",
     ),
-    # --- admin, client to server, spec 9.10 ---
+    # --- admin, client to server, protocol.md 10 ---
     "admin_start_round": m.AdminStartRound(
         timestamp=_T,
         seq=0,
@@ -238,7 +238,7 @@ SAMPLES: dict[str, m._Message] = {
         connection_id="conn_9f2a",
         reason="runaway order rate",
     ),
-    # --- admin, server to client, spec 9.10 ---
+    # --- admin, server to client, protocol.md 10 ---
     "admin_snapshot": m.AdminSnapshot(
         timestamp=_T,
         seq=0,

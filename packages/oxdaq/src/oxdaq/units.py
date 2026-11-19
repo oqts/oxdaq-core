@@ -1,15 +1,15 @@
-"""The integer/decimal boundary. Spec 3.
+"""The integer/decimal boundary. design.md 3.
 
 Integers inside, decimals on the wire. This module is the **only** place
 in the server where a price or a cash figure is allowed to be a float
-(spec 3.3). Everything upstream of it, the order book, the accounting and
+(design.md 3.3). Everything upstream of it, the order book, the accounting and
 the session manager, works in integers, which is why no epsilon
 comparison exists anywhere in the engine.
 
 Server-side only. The client library is float-native throughout: a
 participant never sees a tick count.
 
-Three representations, per spec 3.2:
+Three representations, per design.md 3.2:
 
 ===============  ==========  ==============================================
 Quantity         Internal    Meaning
@@ -34,7 +34,7 @@ __all__ = [
 ]
 
 TICK_SCALE: Final[int] = 10_000
-"""Accounting units per currency unit. Spec 3.2."""
+"""Accounting units per currency unit. design.md 3.2."""
 
 MAX_PRICE_TICKS: Final[int] = 2**48
 """Largest tick count for which the wire round trip is guaranteed exact.
@@ -82,7 +82,7 @@ class TickScale:
     def from_config(cls, tick_size: str | Decimal | int) -> "TickScale":
         """Build from a config value, rejecting anything finer than 1/10000.
 
-        Spec 3.2: every ``tick_size`` must be an exact integer multiple of
+        design.md 3.2: every ``tick_size`` must be an exact integer multiple of
         1/10000, which permits ticks from 0.0001 upward.
 
         A ``float`` is refused outright, and that is the point. The naive
@@ -100,7 +100,7 @@ class TickScale:
             raise TickSizeError(
                 "tick_size must be given as a string or Decimal, not a float: "
                 "a float cannot represent 0.01 exactly and the multiple-of-1/10000 "
-                "check is unreliable against one (spec 3.2)"
+                "check is unreliable against one (design.md 3.2)"
             )
         try:
             value = Decimal(tick_size)
@@ -117,7 +117,7 @@ class TickScale:
             )
         return cls(tick_size=value, tick_units=int(scaled))
 
-    # --- outbound: integer ticks -> decimal on the wire (spec 3.3) ---
+    # --- outbound: integer ticks -> decimal on the wire (design.md 3.3) ---
 
     def to_wire(self, price_ticks: int) -> float:
         """Convert a tick count to the decimal price a participant sees.
@@ -136,7 +136,7 @@ class TickScale:
         """
         return (price_ticks * self.tick_units) / TICK_SCALE
 
-    # --- inbound: decimal from the wire -> integer ticks (spec 3.3) ---
+    # --- inbound: decimal from the wire -> integer ticks (design.md 3.3) ---
 
     def from_wire(self, price: float) -> int:
         """Normalise a submitted price to the nearest tick, half rounding up.
@@ -146,12 +146,12 @@ class TickScale:
         you want to explain in participant documentation. Round half up is
         one sentence.
 
-        Spec 5.5 normalises **before** validating, so buying power is
+        design.md 5.5 normalises **before** validating, so buying power is
         checked against the price that will actually be reserved (D4).
         """
         return math.floor(price * TICK_SCALE / self.tick_units + 0.5)
 
-    # --- integer arithmetic, exact (spec 3.2) ---
+    # --- integer arithmetic, exact (design.md 3.2) ---
 
     def price_units(self, price_ticks: int) -> int:
         """Price in accounting units. Exact."""
@@ -167,12 +167,12 @@ def cash_to_wire(cash_units: int) -> float:
 
     One way only. Cash never returns from the wire: the server is the sole
     source of truth for cash and positions, and client state never feeds
-    validation (spec 5.7). So this conversion has no round-trip
+    validation (design.md 5.7). So this conversion has no round-trip
     obligation, unlike prices, which a strategy really does read off the
     book and send straight back.
 
     The trade tape does not use this. It writes exact decimal strings, so
-    the scoring figure is reproducible byte for byte (spec 11).
+    the scoring figure is reproducible byte for byte (operations.md 2).
     """
     return cash_units / TICK_SCALE
 
@@ -188,7 +188,7 @@ def cash_units_from_decimal(cash: str | Decimal | int) -> int:
     """
     if isinstance(cash, float):
         raise ValueError(
-            "cash must be given as a string or Decimal, not a float (spec 3.2)"
+            "cash must be given as a string or Decimal, not a float (design.md 3.2)"
         )
     scaled = Decimal(cash) * TICK_SCALE
     if scaled != scaled.to_integral_value():

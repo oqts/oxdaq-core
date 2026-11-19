@@ -18,7 +18,7 @@ jobs:
 
       # Python is pinned to 3.13 in .python-version, and production
       # containers run python:3.13-slim, so CI, local and server match
-      # exactly (spec 15.2).
+      # exactly (docs/build.md 2.1).
       - name: Sync the locked environment
         run: uv sync --locked
 
@@ -28,9 +28,9 @@ jobs:
       - name: Format
         run: uv run ruff format --check .
 
-      # tests/protocol/test_golden.py is the schema freeze (spec 15.2,
+      # tests/protocol/test_golden.py is the schema freeze (docs/build.md 2.1,
       # D17). A failure there is not a broken test: it means the wire
       # shape changed, and that is a protocol change requiring a
-      # PROTOCOL_VERSION bump and a matching edit to OXDAQ-PLAN.md.
+      # PROTOCOL_VERSION bump and a matching edit to docs/protocol.md.
       - name: Test
         run: uv run pytest

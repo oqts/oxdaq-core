@@ -10,7 +10,7 @@ dependencies = ["pydantic>=2.9"]
 
 # Deliberately minimal. A WebSocket dependency arrives at milestone 6 with
 # the connection layer, not before: adding one is a design decision
-# (OXDAQ-PLAN.md 15.2) and milestone 1 has no use for it.
+# (build.md 2.1) and milestone 1 has no use for it.
 
 [build-system]
 requires = ["hatchling"]

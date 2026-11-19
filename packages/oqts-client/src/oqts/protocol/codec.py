@@ -1,9 +1,9 @@
-"""Encode and decode wire frames. Spec 9.
+"""Encode and decode wire frames. docs/protocol.md.
 
 The only place JSON becomes a message or a message becomes JSON. Both
 directions are total: ``decode_*`` either returns a valid message or
 raises :class:`DecodeError`, which already carries the ``ErrorCode`` the
-gateway should reply with (spec 9.9). Callers never inspect a pydantic
+gateway should reply with (protocol.md 9). Callers never inspect a pydantic
 exception.
 """
 
@@ -58,10 +58,10 @@ __all__ = [
     "encode",
 ]
 
-# Participant messages. Spec 9.3.
+# Participant messages. protocol.md 3.
 ParticipantMessage = Auth | SubmitOrder | CancelOrder | Resync
 
-# Admin commands. Spec 9.10. A subset of client to server, gated on role.
+# Admin commands. protocol.md 10. A subset of client to server, gated on role.
 AdminCommand = (
     AdminStartRound
     | AdminEndRound
@@ -105,7 +105,7 @@ _SERVER_ADAPTER: Final = TypeAdapter(
 ADMIN_MESSAGE_TYPES: Final[frozenset[str]] = frozenset(
     m.model_fields["type"].default for m in AdminCommand.__args__
 )
-"""Client-to-server types that require ``role == admin`` (spec 9.10)."""
+"""Client-to-server types that require ``role == admin`` (protocol.md 10)."""
 
 ALL_MESSAGE_TYPES: Final[frozenset[str]] = frozenset(
     m.model_fields["type"].default
@@ -224,12 +224,12 @@ def encode(message: ServerMessage | ClientMessage) -> str:
 
 
 class Encoder:
-    """Stamps the envelope for one connection. Spec 9.1.
+    """Stamps the envelope for one connection. protocol.md 1.
 
     ``seq`` is per connection and monotonic, so this is deliberately
     stateful and deliberately one instance per connection. It is not
     thread safe and does not need to be: one coroutine owns each
-    connection (spec 2.2).
+    connection (design.md 2.2).
     """
 
     __slots__ = ("_clock", "_seq")

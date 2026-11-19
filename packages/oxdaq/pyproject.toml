@@ -7,7 +7,7 @@ license = { text = "MIT" }
 dependencies = ["oqts-client"]
 
 # The server depends on the client, not the reverse. Bots connect over
-# localhost using the participant protocol (OXDAQ-PLAN.md 7.1), so the
+# localhost using the participant protocol (design.md 7.1), so the
 # server needs the client package anyway, and this direction makes drift
 # between wire definitions structurally impossible.
 #

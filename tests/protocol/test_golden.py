@@ -1,6 +1,6 @@
-"""The schema freeze. Spec 15.2, D17.
+"""The schema freeze. build.md 2.1, D17.
 
-Section 15.4 requires the message schema to be frozen before any other
+build.md 4 requires the message schema to be frozen before any other
 code is written. Enforcing that by memory would not survive milestone 7,
 so it is enforced here: every message type has a checked-in golden frame,
 compared byte for byte.
@@ -9,7 +9,7 @@ A failure in this file is not a broken test. It is the freeze working. If
 the change is intended, it is a protocol change, which means all four of:
 
 1. bump ``PROTOCOL_VERSION``,
-2. update ``planning/OXDAQ-PLAN.md`` section 9 in the same change set,
+2. update docs/protocol.md in the same change set,
 3. update ``samples.py``,
 4. ``uv run python tests/protocol/regenerate_golden.py``.
 """
@@ -65,15 +65,15 @@ def test_protocol_version_is_pinned() -> None:
 
 
 def test_the_message_type_inventory_is_pinned() -> None:
-    """Spec 9 defines exactly these. Adding one silently is the thing the
+    """docs/protocol.md defines exactly these. Adding one silently is the thing the
     freeze exists to prevent."""
     assert {
-        # client to server, spec 9.3
+        # client to server, protocol.md 3
         "auth",
         "submit_order",
         "cancel_order",
         "resync",
-        # server to client, spec 9.4, 9.5, 9.6
+        # server to client, protocol.md 4, protocol.md 5, protocol.md 6
         "auth_ok",
         "order_ack",
         "order_rejected",
@@ -81,21 +81,21 @@ def test_the_message_type_inventory_is_pinned() -> None:
         "cancel_rejected",
         "state_snapshot",
         "fill",
-        # server to all, spec 9.7, 9.8
+        # server to all, protocol.md 7, protocol.md 8
         "book_update",
         "round_started",
         "news_event",
         "round_ended",
-        # protocol errors, spec 9.9
+        # protocol errors, protocol.md 9
         "error",
-        # admin, client to server, spec 9.10
+        # admin, client to server, protocol.md 10
         "admin_start_round",
         "admin_end_round",
         "admin_inject_news",
         "admin_practice_control",
         "admin_cancel_team_orders",
         "admin_disconnect",
-        # admin, server to client, spec 9.10
+        # admin, server to client, protocol.md 10
         "admin_snapshot",
         "admin_leaderboard",
         "admin_connections",

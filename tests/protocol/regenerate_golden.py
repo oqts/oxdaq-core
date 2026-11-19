@@ -1,7 +1,7 @@
-"""Rewrite the frozen golden corpus. Spec 15.2.
+"""Rewrite the frozen golden corpus. build.md 2.1.
 
 Run this **only** as a deliberate act, alongside a ``PROTOCOL_VERSION``
-bump and a matching change to ``planning/OXDAQ-PLAN.md``::
+bump and a matching change to ``docs/protocol.md``::
 
     uv run python tests/protocol/regenerate_golden.py
 
