@@ -157,7 +157,7 @@ port or state, so nothing in practice can touch a live round.
 | Parameter | Value | Why |
 | --- | --- | --- |
 | Reset | Daily, 04:00 UK | Bounds memory, writes a tape, clean start |
-| Bots | A separate practice parameter set | The competition bots must not be reverse-engineered in advance |
+| Bots | A separate practice parameter set | Practice should not reveal the competition parameter distributions |
 | Instruments | Competition-like, a fresh seed at every reset ([`design.md`](design.md) 6.7) | Practice should transfer; exact configs should not |
 | Leaderboard | Not shown | Practice is for experiments |
 | During a live round | Paused | Frees resources on the day |

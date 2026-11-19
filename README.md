@@ -108,7 +108,7 @@ Alongside milestones 3 to 12, the C++ engine:
 
 ## Scope
 
-Rounds score **realised P&L only**: `final_cash - starting_cash`. Phase 2 ideas, from mark-to-market P&L to a fully C++ exchange, are listed in [`docs/build.md`](docs/build.md).
+Rounds score cash P&L plus open positions valued at the true fair value, revealed after the round ([`docs/operations.md`](docs/operations.md) 1). Phase 2 ideas, from live mark-to-market P&L and a regime-switching price process to a fully C++ exchange, are listed in [`docs/build.md`](docs/build.md).
 
 ## Contributing
 

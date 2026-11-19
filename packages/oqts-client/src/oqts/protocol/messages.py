@@ -339,7 +339,7 @@ class RoundEnded(_Message):
     final_cash: float
     final_positions: dict[str, int]
     realised_pnl: float = Field(
-        description="final_cash - starting_cash. Authoritative for scoring"
+        description="final_cash - starting_cash. Cash P&L, not the score (operations 1)"
     )
 
 

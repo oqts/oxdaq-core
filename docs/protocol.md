@@ -417,5 +417,7 @@ Append-only operational log.
    cash and full positions; overwrite your state from it.
 7. **Order messages are rate limited** (25 a second by default). Over the
    limit you get `rate_limited`, not a disconnection.
-8. **Scoring is realised P&L only:** `final_cash - starting_cash`. An open
-   position at the bell is worth nothing.
+8. **The score values open positions at the true fair value**, revealed
+   only after the round ([`operations.md`](operations.md) 1). Selling
+   short at the bell gains nothing; `realised_pnl` is cash P&L, not the
+   score.
