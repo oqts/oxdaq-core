@@ -33,4 +33,10 @@ jobs:
       # shape changed, and that is a protocol change requiring a
       # PROTOCOL_VERSION bump and a matching edit to docs/protocol.md.
       - name: Test
-        run: uv run pytest
+        run: uv run pytest --ignore=tests/engine
+
+      # The shared engine suite (design 4.5) fails until the reference
+      # engine exists. Remove continue-on-error when milestone 2 is done.
+      - name: Engine suite (required from milestone 2)
+        continue-on-error: true
+        run: uv run pytest tests/engine

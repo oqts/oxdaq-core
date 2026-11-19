@@ -31,3 +31,6 @@ secrets.*
 .DS_Store
 .idea/
 .vscode/
+
+# Failing op streams saved by tests/engine (replay with tests.engine.replay)
+.oxdaq/

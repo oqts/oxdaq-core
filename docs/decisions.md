@@ -40,10 +40,13 @@ here, in the same pull request as the change it makes.
 | D31 | 2026-11-19 | The old client promised public trades that no message carried | `trade_tick` for every match, anonymous, never coalesced | protocol 7 |
 | D32 | 2026-11-19 | The admin chose the seed, and the public generator replays any known seed | The server generates every seed from a secure source, never derived, supplied or reused, revealed only in the tape after the session | design 6.7, protocol 10 |
 | D33 | 2026-11-19 | No rule for bug exploitation, reporting or latency in a public-code competition | A fair-play section: exploits disqualify and the round is rescored from the tape, reports earn credit, latency is allowed | operations 7 |
+| D34 | 2026-11-19 | The engine interface existed only as prose, so the shared suite had no names to target | Pinned: one `Engine` per session holding every book, `process(order) -> list[Fill]`, `cancel(id) -> int \| None`, `snapshot(instrument) -> Book`, with `Side`, `OrderType`, `Order`, `Fill`, `Resting`, `Book` in `oxdaq.engine` and `oxdaq_engine`. The IOC remainder is derived by the caller, not returned | design 4.5 |
+| D35 | 2026-11-19 | Aggregated levels cannot show two engines with different queue order inside a level | `snapshot` lists every resting order in priority order; `book_update` aggregates outside the engine | design 4.5 |
+| D36 | 2026-11-19 | Bad input from the session manager (duplicate resting id, price or volume below 1) had no defined outcome | Both engines raise `ValueError` and leave the book unchanged; cancelling a non-resting id returns `None` | design 4.5 |
 | D37 | 2026-11-19 | `protocol.md` named the fill's position map `position`; the frozen schema says `positions` | `positions`, matching `state_snapshot`; the document was corrected, the wire did not change | protocol 6 |
 
 D1 to D10 resolved problems in the first draft of the spec; D11 to D18
 were found while writing the milestone 1 schema; D19 to D31 came from
 the November 2026 replanning that added the C++ engine and redesigned
 the client; D32 and D33 from a review of what the public spec reveals;
-D37 from implementing protocol v2.
+D34 to D37 from implementing protocol v2 and the shared engine suite.

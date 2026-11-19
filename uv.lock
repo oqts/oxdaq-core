@@ -124,10 +124,14 @@ version = "0.1.0.dev0"
 source = { editable = "packages/oxdaq" }
 dependencies = [
     { name = "oqts-client" },
+    { name = "sortedcontainers" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "oqts-client", editable = "packages/oqts-client" }]
+requires-dist = [
+    { name = "oqts-client", editable = "packages/oqts-client" },
+    { name = "sortedcontainers", specifier = ">=2.4" },
+]
 
 [[package]]
 name = "packaging"
