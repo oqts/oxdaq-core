@@ -121,7 +121,7 @@ def run(ops: Sequence[Op], engines: Sequence[str]) -> None:
                 ) from exc
             after = {i: d.book(i) for i in instruments}
             try:
-                check_step(op, result, before, after, d.seq_of.get(op.id))
+                check_step(op, result, before, after, d.arrival_seq_of.get(op.id))
             except AssertionError as exc:
                 kind, _, message = str(exc).partition(": ")
                 raise StreamError(
@@ -162,11 +162,11 @@ def _fail(kind: str, message: str) -> None:
 
 
 def _key_bid(r: R) -> tuple[int, int]:
-    return (-r.price, r.seq)
+    return (-r.price, r.arrival_seq)
 
 
 def _key_ask(r: R) -> tuple[int, int]:
-    return (r.price, r.seq)
+    return (r.price, r.arrival_seq)
 
 
 def check_book(book: B) -> None:
@@ -182,7 +182,7 @@ def check_book(book: B) -> None:
 
 
 def check_step(
-    op: Op, result, before: dict[int, B], after: dict[int, B], seq: int | None
+    op: Op, result, before: dict[int, B], after: dict[int, B], arrival_seq: int | None
 ) -> None:
     for book in after.values():
         check_book(book)
@@ -190,12 +190,12 @@ def check_step(
     if len(ids) != len(set(ids)):
         _fail("duplicate-id", f"an order id rests twice: {sorted(ids)}")
     if isinstance(op, Submit):
-        _check_submit(op, result, before, after, seq)
+        _check_submit(op, result, before, after, arrival_seq)
     else:
         _check_cancel(op, result, before, after)
 
 
-def _check_submit(op: Submit, fills: list[F], before, after, seq) -> None:
+def _check_submit(op: Submit, fills: list[F], before, after, arrival_seq) -> None:
     i = op.instrument
     pre, post = before[i], after[i]
     pre_same, pre_opp = (
@@ -255,7 +255,8 @@ def _check_submit(op: Submit, fills: list[F], before, after, seq) -> None:
     expected_same = list(pre_same)
     if remainder and op.type == "limit":
         expected_same = sorted(
-            [*expected_same, R(op.id, op.team, op.price, remainder, seq)], key=key
+            [*expected_same, R(op.id, op.team, op.price, remainder, arrival_seq)],
+            key=key,
         )
     if list(post_same) != expected_same:
         _fail("own-side", f"expected {tuple(expected_same)}, got {post_same}")
