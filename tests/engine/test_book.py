@@ -15,7 +15,7 @@ target is one class going green (``uv run pytest tests/engine -k Resting``):
 
 Prices are integer ticks and ids are integers (design 3, 4.2). ``F`` is a
 fill ``(maker, taker, instrument, price, volume)``; ``R`` a resting order
-``(order_id, team, price, remaining, seq)``.
+``(order_id, team, price, remaining, arrival_seq)``.
 """
 
 import pytest
@@ -37,11 +37,11 @@ class TestResting:
 
     def test_a_bid_that_does_not_cross_rests(self, engine: Driver) -> None:
         assert engine.submit(1, "bid", 100, 5, team=3) == []
-        assert engine.book() == B((R(1, 3, 100, 5, engine.seq_of[1]),), ())
+        assert engine.book() == B((R(1, 3, 100, 5, engine.arrival_seq_of[1]),), ())
 
     def test_an_ask_that_does_not_cross_rests(self, engine: Driver) -> None:
         assert engine.submit(1, "ask", 101, 5, team=4) == []
-        assert engine.book() == B((), (R(1, 4, 101, 5, engine.seq_of[1]),))
+        assert engine.book() == B((), (R(1, 4, 101, 5, engine.arrival_seq_of[1]),))
 
     def test_bids_are_highest_price_first(self, engine: Driver) -> None:
         for oid, price in [(1, 99), (2, 101), (3, 100)]:
@@ -68,9 +68,9 @@ class TestResting:
     ) -> None:
         engine.submit(1, "bid", 100, 1)
         engine.submit(2, "bid", 100, 1)
-        assert [r.seq for r in engine.book().bids] == [
-            engine.seq_of[1],
-            engine.seq_of[2],
+        assert [r.arrival_seq for r in engine.book().bids] == [
+            engine.arrival_seq_of[1],
+            engine.arrival_seq_of[2],
         ]
 
     def test_resting_volume_is_not_aggregated(self, engine: Driver) -> None:
@@ -92,11 +92,23 @@ class TestResting:
         assert (
             B(
                 tuple(
-                    R(o.order_id, o.team_id, o.price_ticks, o.remaining_volume, o.seq)
+                    R(
+                        o.order_id,
+                        o.team_id,
+                        o.price_ticks,
+                        o.remaining_volume,
+                        o.arrival_seq,
+                    )
                     for o in raw.bids
                 ),
                 tuple(
-                    R(o.order_id, o.team_id, o.price_ticks, o.remaining_volume, o.seq)
+                    R(
+                        o.order_id,
+                        o.team_id,
+                        o.price_ticks,
+                        o.remaining_volume,
+                        o.arrival_seq,
+                    )
                     for o in raw.asks
                 ),
             )
@@ -134,7 +146,7 @@ class TestMatching:
     ) -> None:
         engine.submit(1, "ask", 100, 3)
         assert engine.submit(2, "bid", 101, 10) == [F(1, 2, 0, 100, 3)]
-        assert engine.book() == B((R(2, 1, 101, 7, engine.seq_of[2]),), ())
+        assert engine.book() == B((R(2, 1, 101, 7, engine.arrival_seq_of[2]),), ())
 
     def test_a_partly_filled_maker_keeps_its_place(self, engine: Driver) -> None:
         engine.submit(1, "ask", 100, 10)
@@ -142,7 +154,7 @@ class TestMatching:
         assert engine.submit(3, "bid", 100, 4) == [F(1, 3, 0, 100, 4)]
         asks = engine.book().asks
         assert [(r.order_id, r.remaining) for r in asks] == [(1, 6), (2, 10)]
-        assert asks[0].seq == engine.seq_of[1]
+        assert asks[0].arrival_seq == engine.arrival_seq_of[1]
 
     def test_makers_at_one_price_fill_in_arrival_order(self, engine: Driver) -> None:
         engine.submit(1, "ask", 100, 2)
@@ -175,7 +187,7 @@ class TestMatching:
         ]
         book = engine.book()
         assert ids(book.bids) == [3]
-        assert book.asks == (R(4, 1, 99, 6, engine.seq_of[4]),)
+        assert book.asks == (R(4, 1, 99, 6, engine.arrival_seq_of[4]),)
 
     def test_each_fill_is_at_its_own_makers_price(self, engine: Driver) -> None:
         engine.submit(1, "bid", 103, 1)
@@ -221,7 +233,7 @@ class TestIOC:
         assert engine.submit(3, "bid", 100, 10, order_type="ioc") == [
             F(1, 3, 0, 100, 3)
         ]
-        assert engine.book() == B((), (R(2, 1, 101, 3, engine.seq_of[2]),))
+        assert engine.book() == B((), (R(2, 1, 101, 3, engine.arrival_seq_of[2]),))
 
     def test_an_ioc_sweeps_levels(self, engine: Driver) -> None:
         engine.submit(1, "bid", 101, 2)

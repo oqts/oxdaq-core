@@ -141,7 +141,7 @@ and the reservation it justifies are one synchronous step:
 if not passes_validation(order, state):
     return reject(order, reason)
 state.reserve(order)          # reserved_cash or open_buy/sell_volume
-order.seq = next_seq()
+order.arrival_seq = next_arrival_seq()
 order_queue.put_nowait((order, connection))
 ```
 
@@ -234,12 +234,12 @@ class Order:
     price_ticks: int
     volume: int
     remaining_volume: int
-    seq: int                  # arrival sequence: time priority
+    arrival_seq: int          # arrival sequence: time priority
 
 class OrderBook:
     # Exact integer keys: no epsilon comparison anywhere.
-    #   bids: key = (-price_ticks, seq)
-    #   asks: key = ( price_ticks, seq)
+    #   bids: key = (-price_ticks, arrival_seq)
+    #   asks: key = ( price_ticks, arrival_seq)
     bids: SortedList[Order]
     asks: SortedList[Order]
 ```
@@ -273,7 +273,7 @@ class OrderType(IntEnum): LIMIT = 0; IOC = 1
 Order                     # the fields of 4.2
 Fill                      # maker_order_id, taker_order_id, instrument_id,
                           # price_ticks, volume
-Resting                   # order_id, team_id, price_ticks, remaining_volume, seq
+Resting                   # order_id, team_id, price_ticks, remaining_volume, arrival_seq
 Book                      # bids, asks: list[Resting], each best first
 
 class Engine(Protocol):

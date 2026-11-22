@@ -40,7 +40,7 @@ class R(NamedTuple):
     team: int
     price: int
     remaining: int
-    seq: int
+    arrival_seq: int
 
 
 class B(NamedTuple):
@@ -98,8 +98,8 @@ class Driver:
         self.name = name
         self.module, engine_cls = load(name)
         self.engine = engine_cls()
-        self.seq_of: dict[int, int] = {}
-        self._seq = 0
+        self.arrival_seq_of: dict[int, int] = {}
+        self._arrival_seq = 0
 
     def __repr__(self) -> str:
         return f"Driver({self.name!r})"
@@ -116,8 +116,8 @@ class Driver:
         instrument: int = 0,
     ) -> list[F]:
         """Process one order and return its fills. ``side`` is "bid" or "ask"."""
-        self._seq += 1
-        self.seq_of[order_id] = self._seq
+        self._arrival_seq += 1
+        self.arrival_seq_of[order_id] = self._arrival_seq
         m = self.module
         order = m.Order(
             order_id=order_id,
@@ -128,7 +128,7 @@ class Driver:
             price_ticks=price,
             volume=volume,
             remaining_volume=volume,
-            seq=self._seq,
+            arrival_seq=self._arrival_seq,
         )
         return [
             F(
@@ -151,6 +151,6 @@ class Driver:
 
 def _side(orders) -> tuple[R, ...]:
     return tuple(
-        R(o.order_id, o.team_id, o.price_ticks, o.remaining_volume, o.seq)
+        R(o.order_id, o.team_id, o.price_ticks, o.remaining_volume, o.arrival_seq)
         for o in orders
     )

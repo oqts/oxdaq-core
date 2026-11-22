@@ -47,10 +47,12 @@ here, in the same pull request as the change it makes.
 | D38 | 2026-11-19 | "Price discovery" was the stated skill, but the market maker quoted around the true fair value, so reading its mid revealed the price and studying the bots beat studying the market | The target is trading a realistic multi-instrument market where edges come from information and modelling: market making under adverse selection, relative value and interpreting news, with signal research done offline on published tapes. Rounds run as a curriculum. Linked instruments, the news calendar and a risk penalty are specified before they are built | design 1, operations 1.2 |
 | D39 | 2026-11-19 | Scoring on cash alone counted short-sale proceeds as profit and long inventory as loss, so the best end-of-round move was to sell to the limit at the bell | Open positions valued at the final fair value, rounded once to a tick and revealed in the tape after the round; cash P&L stays on the wire and the live leaderboard as an indicator | operations 1, protocol 8 |
 | D40 | 2026-11-19 | Deterministic bots that knew fair value made one exploit the dominant strategy | No bot sees exact fair value: an informed trader gets a noisy signal, the market maker a noisy estimate. Bot parameters are distributions, drawn per round from the seed and written to the tape; the dry run covers their extremes | design 7 |
+| D41 | 2026-11-22 | The engine's time-priority field and the wire envelope's message counter were both called `seq`, so `Order.seq` read as the message's number | The engine field is `arrival_seq` (`Order`, `Resting`, the bid and ask keys, the shared suite). The wire `seq` is frozen and unchanged; the engine had not been written, so nothing else moved | design 4.2, 4.5 |
 
 D1 to D10 resolved problems in the first draft of the spec; D11 to D18
 were found while writing the milestone 1 schema; D19 to D31 came from
 the November 2026 replanning that added the C++ engine and redesigned
 the client; D32 and D33 from a review of what the public spec reveals;
 D34 to D37 from implementing protocol v2 and the shared engine suite;
-D38 to D40 from a review of what the rounds actually reward.
+D38 to D40 from a review of what the rounds actually reward; D41 from
+reading the protocol against the engine design.
